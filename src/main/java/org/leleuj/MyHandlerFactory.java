@@ -1,20 +1,21 @@
 package org.leleuj;
 
-import static ratpack.groovy.Groovy.groovyTemplate;
-import ratpack.handling.Context;
+import ratpack.func.Action;
+import ratpack.guice.Guice;
+import ratpack.handling.Chain;
 import ratpack.handling.Handler;
 import ratpack.launch.HandlerFactory;
 import ratpack.launch.LaunchConfig;
 
 public class MyHandlerFactory implements HandlerFactory {
-
+    
     @Override
-    public Handler create(LaunchConfig launchConfig) throws Exception {
-        return new Handler() {
+    public Handler create(final LaunchConfig launchConfig) throws Exception {
+        return Guice.handler(launchConfig, new ModuleBootstrap(), new Action<Chain>() {
             @Override
-            public void handle(Context context) {
-                context.render(groovyTemplate("index"));
+            public void execute(final Chain chain) {
+                chain.handler(new MyHandler());
             }
-        };
+        });
     }
 }
