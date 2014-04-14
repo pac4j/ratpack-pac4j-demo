@@ -10,8 +10,8 @@ import ratpack.server.RatpackServerBuilder;
 public class RatpackPac4jDemo {
     
     public static void main(final String[] args) throws Exception {
-        final LaunchConfig launchConfig = LaunchConfigBuilder.baseDir(new File("root")).port(8080)
-            .build(new MyHandlerFactory());
+        final LaunchConfig launchConfig = LaunchConfigBuilder.baseDir(new File("src/main")).port(8080)
+            .build(new AppHandlerFactory());
         final RatpackServer server = RatpackServerBuilder.build(launchConfig);
         server.start();
     }
