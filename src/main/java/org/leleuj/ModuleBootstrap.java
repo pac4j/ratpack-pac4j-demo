@@ -7,12 +7,11 @@ import ratpack.session.SessionModule;
 import ratpack.session.store.MapSessionsModule;
 
 public class ModuleBootstrap implements Action<ModuleRegistry> {
-    
+
     @Override
     public void execute(final ModuleRegistry modules) throws Exception {
         modules.register(new SessionModule());
         modules.register(new MapSessionsModule(10, 5));
         modules.register(new TemplatingModule());
-        // modules.register(new Pac4jModule(facebookClient, new AuthenticateAllAuthorizer()));
     }
 }
