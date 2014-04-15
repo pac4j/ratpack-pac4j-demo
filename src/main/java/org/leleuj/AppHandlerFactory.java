@@ -37,7 +37,7 @@ public class AppHandlerFactory implements HandlerFactory {
                 })
                 .prefix("twitter", new Action<Chain>() {
                     @Override
-                    public void execute(final Chain chain) {
+                    public void execute(final Chain chain) throws Exception {
                         chain.handler(new Pac4jAuthenticationHandler(twitterClient, authenticateAllAuthorizer, "callbackTW"))
                         .handler("index.html", protectedIndexHandler);
                     }
