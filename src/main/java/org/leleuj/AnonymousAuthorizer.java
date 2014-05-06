@@ -8,7 +8,7 @@ import ratpack.pac4j.AbstractAuthorizer;
 public class AnonymousAuthorizer extends AbstractAuthorizer<UserProfile> {
 
     @Override
-    public boolean isAuthenticationRequired(final Context arg0) {
+    public boolean isAuthenticationRequired(final Context context) {
         return false;
     }
 }
