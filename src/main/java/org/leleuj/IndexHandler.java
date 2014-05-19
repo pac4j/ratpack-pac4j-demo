@@ -16,22 +16,19 @@ import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.saml.client.Saml2Client;
 
 import ratpack.handling.Context;
-import ratpack.handling.Handler;
+import ratpack.pac4j.internal.Pac4jProfileHandler;
 import ratpack.pac4j.internal.RatpackWebContext;
-import ratpack.pac4j.internal.SessionConstants;
-import ratpack.session.store.SessionStorage;
 
-public class IndexHandler implements Handler {
+public class IndexHandler extends Pac4jProfileHandler {
     
     private final Clients clients;
     
     public IndexHandler(final Clients clients) {
         this.clients = clients;
     }
-
+    
     protected Object getProfile(final Context context) {
-        final SessionStorage sessionStorage = context.getRequest().get(SessionStorage.class);
-        final UserProfile profile = (UserProfile) sessionStorage.get(SessionConstants.USER_PROFILE);
+        final UserProfile profile = getUserProfile(context);
         if (profile != null) {
             return profile;
         } else {

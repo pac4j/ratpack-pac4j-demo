@@ -1,16 +1,13 @@
 package org.leleuj;
 
 import ratpack.handling.Context;
-import ratpack.handling.Handler;
-import ratpack.pac4j.internal.SessionConstants;
-import ratpack.session.store.SessionStorage;
+import ratpack.pac4j.internal.Pac4jProfileHandler;
 
-public class LogoutHandler implements Handler {
+public class LogoutHandler extends Pac4jProfileHandler {
 
     @Override
     public void handle(final Context context) {
-        final SessionStorage sessionStorage = context.getRequest().get(SessionStorage.class);
-        sessionStorage.remove(SessionConstants.USER_PROFILE);
+        removeUserProfile(context);
         context.redirect("index.html");
     }
 }
