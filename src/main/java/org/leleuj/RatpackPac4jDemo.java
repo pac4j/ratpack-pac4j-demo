@@ -39,7 +39,7 @@ public class RatpackPac4jDemo {
         // CAS
         final CasClient casClient = new CasClient();
         // casClient.setGateway(true);
-        casClient.setCasLoginUrl("http://localhost:8888/cas/login");
+        casClient.setCasLoginUrl("https://freeuse1.casinthecloud.com/leleujgithub/login");
 
         final Clients clients = new Clients(URL + "/callback", saml2Client, facebookClient, twitterClient, formClient,
                 basicAuthClient, casClient);
