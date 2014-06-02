@@ -16,16 +16,11 @@ import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.saml.client.Saml2Client;
 
 import ratpack.handling.Context;
+import ratpack.http.Request;
 import ratpack.pac4j.internal.Pac4jProfileHandler;
 import ratpack.pac4j.internal.RatpackWebContext;
 
 public class IndexHandler extends Pac4jProfileHandler {
-    
-    private final Clients clients;
-    
-    public IndexHandler(final Clients clients) {
-        this.clients = clients;
-    }
     
     protected Object getProfile(final Context context) {
         final UserProfile profile = getUserProfile(context);
@@ -40,6 +35,8 @@ public class IndexHandler extends Pac4jProfileHandler {
     public void handle(final Context context) {
         final Map<String, Object> model = new HashMap<String, Object>();
         model.put("profile", getProfile(context));
+        final Request request = context.getRequest();
+        final Clients clients = request.get(Clients.class);
         final WebContext webContext = new RatpackWebContext(context);        
         model.put("facebookUrl", ((FacebookClient) clients.findClient(FacebookClient.class)).getRedirectionUrl(webContext));
         model.put("twitterUrl", ((TwitterClient) clients.findClient(TwitterClient.class)).getRedirectionUrl(webContext));
