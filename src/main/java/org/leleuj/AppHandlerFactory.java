@@ -49,7 +49,7 @@ public class AppHandlerFactory implements HandlerFactory {
                 // CAS
                 final CasClient casClient = new CasClient();
                 // casClient.setGateway(true);
-                casClient.setCasLoginUrl("https://freeuse1.casinthecloud.com/leleujgithub/login");
+                casClient.setCasLoginUrl("http://localhost:8888/cas/login");
                 
                 handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
                                                 basicAuthClient, casClient));
