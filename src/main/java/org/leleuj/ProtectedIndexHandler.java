@@ -11,8 +11,8 @@ public class ProtectedIndexHandler extends IndexHandler {
 
     @Override
     public void handle(final Context context) {
-        final Map<String, Object> model = new HashMap<String, Object>();
-        model.put("profile", getProfile(context));
+        final Map<String, Object> model = new HashMap<>();
+        populateProfileInModel(context, model);
         context.render(groovyTemplate(model, "protectedIndex.html"));
     }
 }

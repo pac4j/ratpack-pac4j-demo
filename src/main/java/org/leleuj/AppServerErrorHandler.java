@@ -7,7 +7,7 @@ import ratpack.handling.Context;
 public class AppServerErrorHandler implements ServerErrorHandler {
     
     @Override
-    public void error(final Context context, final Exception exception) {
+    public void error(final Context context, final Throwable t) {
         context.render(groovyTemplate("error500.html"));
     }
 }

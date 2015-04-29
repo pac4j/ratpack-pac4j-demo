@@ -8,15 +8,21 @@ import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.saml.client.Saml2Client;
 
+import ratpack.error.ClientErrorHandler;
+import ratpack.error.ServerErrorHandler;
+import ratpack.func.Action;
+
 import ratpack.guice.Guice;
-import ratpack.handling.ChainAction;
+import ratpack.handling.Chain;
 import ratpack.handling.Handler;
 import ratpack.handling.Handlers;
 import ratpack.launch.HandlerFactory;
-import ratpack.launch.LaunchConfig;
+import ratpack.pac4j.Pac4jCallbackHandlerBuilder;
 import ratpack.pac4j.internal.Pac4jAuthenticationHandler;
-import ratpack.pac4j.internal.Pac4jCallbackHandler;
 import ratpack.pac4j.internal.Pac4jClientsHandler;
+import ratpack.registry.Registry;
+
+import static ratpack.handling.Handlers.chain;
 
 public class AppHandlerFactory implements HandlerFactory {
 
@@ -28,49 +34,50 @@ public class AppHandlerFactory implements HandlerFactory {
         this.protectedIndexHandler = Handlers.path("index.html", new ProtectedIndexHandler());
     }
 
-    @Override
-    public Handler create(final LaunchConfig launchConfig) throws Exception {
-        return Guice.handler(launchConfig, new Bindings(), new ChainAction() {
-            @Override
-            protected void execute() throws Exception {
-                final Saml2Client saml2Client = new Saml2Client();
-                saml2Client.setKeystorePath("resource:samlKeystore.jks");
-                saml2Client.setKeystorePassword("pac4j-demo-passwd");
-                saml2Client.setPrivateKeyPassword("pac4j-demo-passwd");
-                saml2Client.setIdpMetadataPath("resource:testshib-providers.xml");
+    public Handler create(Registry registry) throws Exception {
+        final Saml2Client saml2Client = new Saml2Client();
+        saml2Client.setKeystorePath("resource:samlKeystore.jks");
+        saml2Client.setKeystorePassword("pac4j-demo-passwd");
+        saml2Client.setPrivateKeyPassword("pac4j-demo-passwd");
+        saml2Client.setIdpMetadataPath("resource:testshib-providers.xml");
 
-                final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
-                final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA",
-                        "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
-                // HTTP
-                final FormClient formClient = new FormClient(launchConfig.getPublicAddress().toString() + "/theForm.html", new SimpleTestUsernamePasswordAuthenticator());
-                final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
+        final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
+        final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA",
+                "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
+        // HTTP
+        final FormClient formClient = new FormClient(RatpackPac4jDemo.URL + "/theForm.html", new SimpleTestUsernamePasswordAuthenticator());
+        final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
 
-                // CAS
-                final CasClient casClient = new CasClient();
-                // casClient.setGateway(true);
-                casClient.setCasLoginUrl("http://localhost:8888/cas/login");
-                
-                handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
-                                                basicAuthClient, casClient));
-                handler("", new DefaultRedirectHandler());
+        // CAS
+        final CasClient casClient = new CasClient();
+        // casClient.setGateway(true);
+        casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
-                prefix("facebook", new AuthenticatedPageChain("FacebookClient"));
-                prefix("twitter", new AuthenticatedPageChain("TwitterClient"));
-                prefix("form", new AuthenticatedPageChain("FormClient"));
-                prefix("basicauth", new AuthenticatedPageChain("BasicAuthClient"));
-                prefix("cas", new AuthenticatedPageChain("CasClient"));
-                prefix("saml2", new AuthenticatedPageChain("Saml2Client"));
+        return chain(registry, (chain) -> chain
+                        .register(r -> {
+                            r.add(ServerErrorHandler.class, new AppServerErrorHandler());
+                            r.add(ClientErrorHandler.class, new AppClientErrorHandler());
+                        })
 
-                handler("theForm.html", new FormHandler(formClient));
-                handler("logout.html", new LogoutHandler());
-                handler("index.html", new IndexHandler());
-                handler("callback", new Pac4jCallbackHandler());
-            }
-        });
+                        .handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
+                                basicAuthClient, casClient))
+                        .handler("", new DefaultRedirectHandler())
+
+                        .prefix("facebook", new AuthenticatedPageChain("FacebookClient"))
+                        .prefix("twitter", new AuthenticatedPageChain("TwitterClient"))
+                        .prefix("form", new AuthenticatedPageChain("FormClient"))
+                        .prefix("basicauth", new AuthenticatedPageChain("BasicAuthClient"))
+                        .prefix("cas", new AuthenticatedPageChain("CasClient"))
+                        .prefix("saml2", new AuthenticatedPageChain("Saml2Client"))
+
+                        .handler("theForm.html", new FormHandler(formClient))
+                        .handler("logout.html", new LogoutHandler())
+                        .handler("index.html", new IndexHandler())
+                        .handler("callback", new Pac4jCallbackHandlerBuilder().build())
+        );
     }
 
-    private class AuthenticatedPageChain extends ChainAction {
+    private class AuthenticatedPageChain implements Action<Chain> {
 
         private final String clientName;
 
@@ -79,9 +86,10 @@ public class AppHandlerFactory implements HandlerFactory {
         }
 
         @Override
-        protected void execute() {
-            handler(new Pac4jAuthenticationHandler(clientName, authenticatedAuthorizer));
-            handler(protectedIndexHandler);
+        public void execute(Chain chain) throws Exception {
+            chain
+                    .handler(new Pac4jAuthenticationHandler(clientName, authenticatedAuthorizer))
+                    .handler(protectedIndexHandler);
         }
     }
 }

@@ -20,7 +20,7 @@ public class FormHandler implements Handler {
     
     @Override
     public void handle(final Context context) {
-        final Map<String, Object> model = new HashMap<String, Object>();
+        final Map<String, Object> model = new HashMap<>();
         model.put("callbackUrl", formClient.getCallbackUrl());
         context.render(groovyTemplate(model, "theForm.html"));
     }
