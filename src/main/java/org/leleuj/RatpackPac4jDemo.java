@@ -22,11 +22,13 @@ public class RatpackPac4jDemo {
          RatpackServer.start(server -> server
                          .serverConfig(ServerConfig.baseDir(new File("src/main")).publicAddress(new URI(URL)).port(PORT).build())
                          .registry(Guice.registry(b -> {
-                             b.add(new SessionModule());
-                             b.add(new MapSessionsModule(10, 5));
+                             b.bind(ServerErrorHandler.class, AppServerErrorHandler.class);
+                             b.bind(ClientErrorHandler.class, AppClientErrorHandler.class);
                              b.add(TextTemplateModule.class);
+                             b.add(new MapSessionsModule(10, 5));
+                             b.add(new SessionModule());
                          }))
-                        .handlers(chain -> new AppHandlerFactory())
+                         .handlers(new AppHandlerFactory())
         );
 
     }

@@ -7,24 +7,15 @@ import org.pac4j.http.credentials.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.saml.client.Saml2Client;
-
-import ratpack.error.ClientErrorHandler;
-import ratpack.error.ServerErrorHandler;
 import ratpack.func.Action;
-
-import ratpack.guice.Guice;
 import ratpack.handling.Chain;
 import ratpack.handling.Handler;
 import ratpack.handling.Handlers;
-import ratpack.launch.HandlerFactory;
 import ratpack.pac4j.Pac4jCallbackHandlerBuilder;
 import ratpack.pac4j.internal.Pac4jAuthenticationHandler;
 import ratpack.pac4j.internal.Pac4jClientsHandler;
-import ratpack.registry.Registry;
 
-import static ratpack.handling.Handlers.chain;
-
-public class AppHandlerFactory implements HandlerFactory {
+public class AppHandlerFactory implements Action<Chain> {
 
     private final AuthenticatedAuthorizer authenticatedAuthorizer;
     private final Handler protectedIndexHandler;
@@ -34,7 +25,7 @@ public class AppHandlerFactory implements HandlerFactory {
         this.protectedIndexHandler = Handlers.path("index.html", new ProtectedIndexHandler());
     }
 
-    public Handler create(Registry registry) throws Exception {
+    public void execute(Chain chain) throws Exception {
         final Saml2Client saml2Client = new Saml2Client();
         saml2Client.setKeystorePath("resource:samlKeystore.jks");
         saml2Client.setKeystorePassword("pac4j-demo-passwd");
@@ -53,12 +44,7 @@ public class AppHandlerFactory implements HandlerFactory {
         // casClient.setGateway(true);
         casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
-        return chain(registry, (chain) -> chain
-                        .register(r -> {
-                            r.add(ServerErrorHandler.class, new AppServerErrorHandler());
-                            r.add(ClientErrorHandler.class, new AppClientErrorHandler());
-                        })
-
+        chain
                         .handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
                                 basicAuthClient, casClient))
                         .handler("", new DefaultRedirectHandler())
@@ -73,7 +59,7 @@ public class AppHandlerFactory implements HandlerFactory {
                         .handler("theForm.html", new FormHandler(formClient))
                         .handler("logout.html", new LogoutHandler())
                         .handler("index.html", new IndexHandler())
-                        .handler("callback", new Pac4jCallbackHandlerBuilder().build())
+                        .handler("callback", new Pac4jCallbackHandlerBuilder().build()
         );
     }
 
