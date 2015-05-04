@@ -9,10 +9,9 @@ import ratpack.handling.Context;
 
 public class ProtectedIndexHandler extends IndexHandler {
 
-    @Override
-    public void handle(final Context context) {
+    protected void render(final Context context, final Object profile) {
         final Map<String, Object> model = new HashMap<>();
-        populateProfileInModel(context, model);
+        model.put(PROFILE, profile);
         context.render(groovyTemplate(model, "protectedIndex.html"));
     }
 }

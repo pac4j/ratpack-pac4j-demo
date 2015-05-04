@@ -4,6 +4,7 @@ import org.pac4j.cas.client.CasClient;
 import org.pac4j.http.client.BasicAuthClient;
 import org.pac4j.http.client.FormClient;
 import org.pac4j.http.credentials.SimpleTestUsernamePasswordAuthenticator;
+import org.pac4j.http.profile.UsernameProfileCreator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.saml.client.Saml2Client;
@@ -36,8 +37,9 @@ public class AppHandlerFactory implements Action<Chain> {
         final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA",
                 "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
         // HTTP
-        final FormClient formClient = new FormClient(RatpackPac4jDemo.URL + "/theForm.html", new SimpleTestUsernamePasswordAuthenticator());
-        final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
+        final FormClient formClient = new FormClient(RatpackPac4jDemo.URL + "/theForm.html", new SimpleTestUsernamePasswordAuthenticator(),
+                new UsernameProfileCreator());
+        final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
 
         // CAS
         final CasClient casClient = new CasClient();
@@ -45,21 +47,21 @@ public class AppHandlerFactory implements Action<Chain> {
         casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
         chain
-                        .handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
-                                basicAuthClient, casClient))
-                        .handler("", new DefaultRedirectHandler())
+            .handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
+                    basicAuthClient, casClient))
+            .handler("", new DefaultRedirectHandler())
 
-                        .prefix("facebook", new AuthenticatedPageChain("FacebookClient"))
-                        .prefix("twitter", new AuthenticatedPageChain("TwitterClient"))
-                        .prefix("form", new AuthenticatedPageChain("FormClient"))
-                        .prefix("basicauth", new AuthenticatedPageChain("BasicAuthClient"))
-                        .prefix("cas", new AuthenticatedPageChain("CasClient"))
-                        .prefix("saml2", new AuthenticatedPageChain("Saml2Client"))
+            .prefix("facebook", new AuthenticatedPageChain("FacebookClient"))
+            .prefix("twitter", new AuthenticatedPageChain("TwitterClient"))
+            .prefix("form", new AuthenticatedPageChain("FormClient"))
+            .prefix("basicauth", new AuthenticatedPageChain("BasicAuthClient"))
+            .prefix("cas", new AuthenticatedPageChain("CasClient"))
+            .prefix("saml2", new AuthenticatedPageChain("Saml2Client"))
 
-                        .handler("theForm.html", new FormHandler(formClient))
-                        .handler("logout.html", new LogoutHandler())
-                        .handler("index.html", new IndexHandler())
-                        .handler("callback", new Pac4jCallbackHandlerBuilder().build()
+            .handler("theForm.html", new FormHandler(formClient))
+            .handler("logout.html", new LogoutHandler())
+            .handler("index.html", new IndexHandler())
+            .handler("callback", new Pac4jCallbackHandlerBuilder().build()
         );
     }
 
@@ -74,8 +76,8 @@ public class AppHandlerFactory implements Action<Chain> {
         @Override
         public void execute(Chain chain) throws Exception {
             chain
-                    .handler(new Pac4jAuthenticationHandler(clientName, authenticatedAuthorizer))
-                    .handler(protectedIndexHandler);
+                .handler(new Pac4jAuthenticationHandler(clientName, authenticatedAuthorizer))
+                .handler(protectedIndexHandler);
         }
     }
 }
