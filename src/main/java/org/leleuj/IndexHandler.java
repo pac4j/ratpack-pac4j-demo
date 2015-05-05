@@ -87,7 +87,7 @@ public class IndexHandler extends Pac4jProfileHandler {
 
             return null;
         }).onError(ex -> {
-                throw new TechnicalException("Failed to redirect", ex);
+                throw new TechnicalException("Failed to compute redirections", ex);
         }).then(ignored -> context.render(groovyTemplate(model, "index.html")));
     }
 }
