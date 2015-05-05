@@ -8,6 +8,7 @@ import java.util.Map;
 import org.pac4j.cas.client.CasClient;
 import org.pac4j.core.client.Clients;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.http.client.BasicAuthClient;
 import org.pac4j.http.client.FormClient;
 import org.pac4j.oauth.client.FacebookClient;
@@ -53,36 +54,40 @@ public class IndexHandler extends Pac4jProfileHandler {
         final Clients clients = request.get(Clients.class);
         final WebContext webContext = new RatpackWebContext(context);
 
-        final FacebookClient fbclient = (FacebookClient) clients.findClient(FacebookClient.class);
-        final String fbUrl = fbclient.getRedirectionUrl(webContext);
-        logger.debug("fbUrl: {}", fbUrl);
-        model.put("facebookUrl", fbUrl);
+        context.blocking(() -> {
+            final FacebookClient fbclient = (FacebookClient) clients.findClient(FacebookClient.class);
+            final String fbUrl = fbclient.getRedirectionUrl(webContext);
+            logger.debug("fbUrl: {}", fbUrl);
+            model.put("facebookUrl", fbUrl);
 
-        final TwitterClient twClient = (TwitterClient) clients.findClient(TwitterClient.class);
-        final String twUrl = twClient.getRedirectionUrl(webContext);
-        logger.debug("twUrl: {}", twUrl);
-        model.put("twitterUrl", twUrl);
+            final TwitterClient twClient = (TwitterClient) clients.findClient(TwitterClient.class);
+            final String twUrl = twClient.getRedirectionUrl(webContext);
+            logger.debug("twUrl: {}", twUrl);
+            model.put("twitterUrl", twUrl);
 
-        final FormClient fmClient = (FormClient) clients.findClient(FormClient.class);
-        final String fmUrl = fmClient.getRedirectionUrl(webContext);
-        logger.debug("fmUrl: {}", fmUrl);
-        model.put("formUrl", fmUrl);
+            final FormClient fmClient = (FormClient) clients.findClient(FormClient.class);
+            final String fmUrl = fmClient.getRedirectionUrl(webContext);
+            logger.debug("fmUrl: {}", fmUrl);
+            model.put("formUrl", fmUrl);
 
-        final BasicAuthClient baClient = (BasicAuthClient) clients.findClient(BasicAuthClient.class);
-        final String baUrl = baClient.getRedirectionUrl(webContext);
-        logger.debug("baUrl: {}", baUrl);
-        model.put("baUrl", baUrl);
+            final BasicAuthClient baClient = (BasicAuthClient) clients.findClient(BasicAuthClient.class);
+            final String baUrl = baClient.getRedirectionUrl(webContext);
+            logger.debug("baUrl: {}", baUrl);
+            model.put("baUrl", baUrl);
 
-        final CasClient casClient = (CasClient) clients.findClient(CasClient.class);
-        final String casUrl = casClient.getRedirectionUrl(webContext);
-        logger.debug("casUrl: {}", casUrl);
-        model.put("casUrl", casUrl);
+            final CasClient casClient = (CasClient) clients.findClient(CasClient.class);
+            final String casUrl = casClient.getRedirectionUrl(webContext);
+            logger.debug("casUrl: {}", casUrl);
+            model.put("casUrl", casUrl);
 
-        final Saml2Client samlClient = (Saml2Client) clients.findClient(Saml2Client.class);
-        final String samlUrl = samlClient.getRedirectionUrl(webContext);
-        logger.debug("samlUrl: {}", samlUrl);
-        model.put("samlUrl", samlUrl);
+            final Saml2Client samlClient = (Saml2Client) clients.findClient(Saml2Client.class);
+            final String samlUrl = samlClient.getRedirectionUrl(webContext);
+            logger.debug("samlUrl: {}", samlUrl);
+            model.put("samlUrl", samlUrl);
 
-        context.render(groovyTemplate(model, "index.html"));
+            return null;
+        }).onError(ex -> {
+                throw new TechnicalException("Failed to redirect", ex);
+        }).then(ignored -> context.render(groovyTemplate(model, "index.html")));
     }
 }
