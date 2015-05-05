@@ -52,12 +52,37 @@ public class IndexHandler extends Pac4jProfileHandler {
         final Request request = context.getRequest();
         final Clients clients = request.get(Clients.class);
         final WebContext webContext = new RatpackWebContext(context);
-        model.put("facebookUrl", ((FacebookClient) clients.findClient(FacebookClient.class)).getRedirectionUrl(webContext));
-        model.put("twitterUrl", ((TwitterClient) clients.findClient(TwitterClient.class)).getRedirectionUrl(webContext));
-        model.put("formUrl", ((FormClient) clients.findClient(FormClient.class)).getRedirectionUrl(webContext));
-        model.put("baUrl", ((BasicAuthClient) clients.findClient(BasicAuthClient.class)).getRedirectionUrl(webContext));
-        model.put("casUrl", ((CasClient) clients.findClient(CasClient.class)).getRedirectionUrl(webContext));
-        model.put("samlUrl", ((Saml2Client) clients.findClient(Saml2Client.class)).getRedirectionUrl(webContext));
+
+        final FacebookClient fbclient = (FacebookClient) clients.findClient(FacebookClient.class);
+        final String fbUrl = fbclient.getRedirectionUrl(webContext);
+        logger.debug("fbUrl: {}", fbUrl);
+        model.put("facebookUrl", fbUrl);
+
+        final TwitterClient twClient = (TwitterClient) clients.findClient(TwitterClient.class);
+        final String twUrl = twClient.getRedirectionUrl(webContext);
+        logger.debug("twUrl: {}", twUrl);
+        model.put("twitterUrl", twUrl);
+
+        final FormClient fmClient = (FormClient) clients.findClient(FormClient.class);
+        final String fmUrl = fmClient.getRedirectionUrl(webContext);
+        logger.debug("fmUrl: {}", fmUrl);
+        model.put("formUrl", fmUrl);
+
+        final BasicAuthClient baClient = (BasicAuthClient) clients.findClient(BasicAuthClient.class);
+        final String baUrl = baClient.getRedirectionUrl(webContext);
+        logger.debug("baUrl: {}", baUrl);
+        model.put("baUrl", baUrl);
+
+        final CasClient casClient = (CasClient) clients.findClient(CasClient.class);
+        final String casUrl = casClient.getRedirectionUrl(webContext);
+        logger.debug("casUrl: {}", casUrl);
+        model.put("casUrl", casUrl);
+
+        final Saml2Client samlClient = (Saml2Client) clients.findClient(Saml2Client.class);
+        final String samlUrl = samlClient.getRedirectionUrl(webContext);
+        logger.debug("samlUrl: {}", samlUrl);
+        model.put("samlUrl", samlUrl);
+
         context.render(groovyTemplate(model, "index.html"));
     }
 }
