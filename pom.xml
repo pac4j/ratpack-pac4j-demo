@@ -23,7 +23,7 @@
 
 	<properties>
 		<pac4jVersion>1.7.0</pac4jVersion>
-		<ratpackVersion>0.9.16-SNAPSHOT</ratpackVersion>
+		<ratpackVersion>0.9.18-SNAPSHOT</ratpackVersion>
 	</properties>
 
 	<dependencies>

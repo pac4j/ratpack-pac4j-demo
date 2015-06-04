@@ -10,7 +10,6 @@ import ratpack.guice.Guice;
 import ratpack.server.RatpackServer;
 import ratpack.server.ServerConfig;
 import ratpack.session.SessionModule;
-import ratpack.session.store.MapSessionsModule;
 
 public class RatpackPac4jDemo {
 
@@ -25,8 +24,7 @@ public class RatpackPac4jDemo {
                              b.bind(ServerErrorHandler.class, AppServerErrorHandler.class);
                              b.bind(ClientErrorHandler.class, AppClientErrorHandler.class);
                              b.add(TextTemplateModule.class);
-                             b.add(new MapSessionsModule(10, 5));
-                             b.add(new SessionModule());
+                             b.module(SessionModule.class);
                          }))
                          .handlers(new AppHandlerFactory())
         );

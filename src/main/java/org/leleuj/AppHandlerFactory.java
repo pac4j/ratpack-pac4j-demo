@@ -1,6 +1,7 @@
 package org.leleuj;
 
 import org.pac4j.cas.client.CasClient;
+import org.pac4j.core.client.Client;
 import org.pac4j.http.client.BasicAuthClient;
 import org.pac4j.http.client.FormClient;
 import org.pac4j.http.credentials.SimpleTestUsernamePasswordAuthenticator;
@@ -11,19 +12,14 @@ import org.pac4j.saml.client.Saml2Client;
 import ratpack.func.Action;
 import ratpack.handling.Chain;
 import ratpack.handling.Handler;
-import ratpack.handling.Handlers;
-import ratpack.pac4j.Pac4jCallbackHandlerBuilder;
-import ratpack.pac4j.internal.Pac4jAuthenticationHandler;
-import ratpack.pac4j.internal.Pac4jClientsHandler;
+import ratpack.pac4j.RatpackPac4j;
 
 public class AppHandlerFactory implements Action<Chain> {
 
-    private final AuthenticatedAuthorizer authenticatedAuthorizer;
     private final Handler protectedIndexHandler;
 
     public AppHandlerFactory() {
-        this.authenticatedAuthorizer = new AuthenticatedAuthorizer();
-        this.protectedIndexHandler = Handlers.path("index.html", new ProtectedIndexHandler());
+        this.protectedIndexHandler = new ProtectedIndexHandler();
     }
 
     public void execute(Chain chain) throws Exception {
@@ -47,37 +43,34 @@ public class AppHandlerFactory implements Action<Chain> {
         casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
         chain
-            .handler(new Pac4jClientsHandler("callback", formClient, formClient, saml2Client, facebookClient, twitterClient,
-                    basicAuthClient, casClient))
-            .handler("", new DefaultRedirectHandler())
-
-            .prefix("facebook", new AuthenticatedPageChain("FacebookClient"))
-            .prefix("twitter", new AuthenticatedPageChain("TwitterClient"))
-            .prefix("form", new AuthenticatedPageChain("FormClient"))
-            .prefix("basicauth", new AuthenticatedPageChain("BasicAuthClient"))
-            .prefix("cas", new AuthenticatedPageChain("CasClient"))
-            .prefix("saml2", new AuthenticatedPageChain("Saml2Client"))
-
-            .handler("theForm.html", new FormHandler(formClient))
-            .handler("logout.html", new LogoutHandler())
-            .handler("index.html", new IndexHandler())
-            .handler("callback", new Pac4jCallbackHandlerBuilder().build()
+            .all(RatpackPac4j.callback("callback", formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient))
+            .path("", new DefaultRedirectHandler())
+            .prefix("facebook", new AuthenticatedPageChain(FacebookClient.class))
+            .prefix("twitter", new AuthenticatedPageChain(TwitterClient.class))
+            .prefix("form", new AuthenticatedPageChain(FormClient.class))
+            .prefix("basicauth", new AuthenticatedPageChain(BasicAuthClient.class))
+            .prefix("cas", new AuthenticatedPageChain(CasClient.class))
+            .prefix("saml2", new AuthenticatedPageChain(Saml2Client.class))
+            .path("theForm.html", new FormHandler(formClient))
+            .path("logout.html", new LogoutHandler())
+            .path("index.html", new IndexHandler()
+            //.path("callback", RatpackPac4j.callback(formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient)
         );
     }
 
     private class AuthenticatedPageChain implements Action<Chain> {
 
-        private final String clientName;
+        private final Class<? extends Client<?, ?>> clientClass;
 
-        public AuthenticatedPageChain(String clientName) {
-            this.clientName = clientName;
+        public AuthenticatedPageChain(Class<? extends Client<?, ?>> clientClass) {
+            this.clientClass = clientClass;
         }
 
         @Override
         public void execute(Chain chain) throws Exception {
             chain
-                .handler(new Pac4jAuthenticationHandler(clientName, authenticatedAuthorizer))
-                .handler(protectedIndexHandler);
+                .all(RatpackPac4j.auth(clientClass))
+                .path("index.html", protectedIndexHandler);
         }
     }
 }
