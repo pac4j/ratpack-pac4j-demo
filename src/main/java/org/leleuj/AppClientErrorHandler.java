@@ -9,11 +9,12 @@ import ratpack.error.ClientErrorHandler;
 import ratpack.handling.Context;
 
 public class AppClientErrorHandler implements ClientErrorHandler {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(AppClientErrorHandler.class);
-    
+
     @Override
     public void error(final Context context, final int statusCode) throws Exception {
+        context.getResponse().status(statusCode);
         if (statusCode == 404) {
             context.render(groovyTemplate("error404.html"));
         } else if (statusCode == 401) {
