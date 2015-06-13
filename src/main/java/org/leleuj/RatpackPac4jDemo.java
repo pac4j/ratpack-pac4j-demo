@@ -18,25 +18,21 @@ import org.slf4j.LoggerFactory;
 import ratpack.error.ClientErrorHandler;
 import ratpack.error.ServerErrorHandler;
 import ratpack.func.Action;
-import ratpack.groovy.Groovy;
 import ratpack.groovy.template.TextTemplateModule;
 import ratpack.guice.Guice;
 import ratpack.handling.Chain;
-import ratpack.handling.Handlers;
 import ratpack.pac4j.RatpackPac4j;
-import ratpack.pac4j.internal.RatpackWebContext;
 import ratpack.server.RatpackServer;
 import ratpack.server.ServerConfig;
-import ratpack.session.Session;
-import ratpack.session.SessionData;
 import ratpack.session.SessionModule;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.singletonMap;
 import static ratpack.groovy.Groovy.groovyTemplate;
+import static ratpack.handling.Handlers.redirect;
 
 public class RatpackPac4jDemo {
 
@@ -75,8 +71,8 @@ public class RatpackPac4jDemo {
                     saml2Client.setIdpMetadataPath("resource:testshib-providers.xml");
 
                     final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
-                    final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA",
-                        "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
+                    final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA", "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
+
                     // HTTP
                     final FormClient formClient = new FormClient("/theForm.html", new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
                     final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
@@ -87,7 +83,7 @@ public class RatpackPac4jDemo {
                     casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
                     chain
-                        .path(Handlers.redirect(301, "index.html"))
+                        .path(redirect(301, "index.html"))
                         .all(RatpackPac4j.authenticator(formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient))
                         .prefix("facebook", auth(FacebookClient.class))
                         .prefix("twitter", auth(TwitterClient.class))
@@ -96,60 +92,48 @@ public class RatpackPac4jDemo {
                         .prefix("cas", auth(CasClient.class))
                         .prefix("saml2", auth(Saml2Client.class))
                         .path("theForm.html", ctx -> {
-                            ctx.render(
-                                Groovy.groovyTemplate(
-                                    Collections.singletonMap("callbackUrl", formClient.getCallbackUrl()),
-                                    "theForm.html"
-                                )
-                            );
+                            ctx.render(groovyTemplate(
+                                singletonMap("callbackUrl", formClient.getCallbackUrl()),
+                                "theForm.html"
+                            ));
                         })
                         .path("logout.html", ctx ->
                                 RatpackPac4j.logout(ctx).then(() -> ctx.redirect("index.html"))
                         )
-                        .path("index.html", context -> {
+                        .path("index.html", ctx -> {
                             LOGGER.debug("Retrieving user profile...");
-                            RatpackPac4j.userProfile(context)
-                                .left(context.get(Session.class).getData())
+                            RatpackPac4j.userProfile(ctx)
+                                .left(RatpackPac4j.webContext(ctx))
                                 .then(pair -> {
-                                    final SessionData sessionData = pair.left;
+                                    final WebContext webContext = pair.left;
                                     final Optional<UserProfile> profile = pair.right;
 
                                     final Map<String, Object> model = Maps.newHashMap();
                                     profile.ifPresent(p -> model.put("profile", p));
 
-                                    final Clients clients = context.get(Clients.class);
-                                    final WebContext webContext = new RatpackWebContext(context, sessionData);
+                                    final Clients clients = ctx.get(Clients.class);
 
                                     final FacebookClient fbclient = clients.findClient(FacebookClient.class);
                                     final String fbUrl = fbclient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("fbUrl: {}", fbUrl);
                                     model.put("facebookUrl", fbUrl);
 
                                     final TwitterClient twClient = clients.findClient(TwitterClient.class);
                                     final String twUrl = twClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("twUrl: {}", twUrl);
                                     model.put("twitterUrl", twUrl);
 
                                     final FormClient fmClient = clients.findClient(FormClient.class);
                                     final String fmUrl = fmClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("fmUrl: {}", fmUrl);
                                     model.put("formUrl", fmUrl);
 
                                     final BasicAuthClient baClient = clients.findClient(BasicAuthClient.class);
                                     final String baUrl = baClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("baUrl: {}", baUrl);
                                     model.put("baUrl", baUrl);
 
                                     final CasClient casClient1 = clients.findClient(CasClient.class);
                                     final String casUrl = casClient1.getRedirectionUrl(webContext);
-                                    LOGGER.debug("casUrl: {}", casUrl);
                                     model.put("casUrl", casUrl);
 
-                                    final Saml2Client samlClient = clients.findClient(Saml2Client.class);
-                                    final String samlUrl = samlClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("samlUrl: {}", samlUrl);
-
-                                    context.render(Groovy.groovyTemplate(model, "index.html"));
+                                    ctx.render(groovyTemplate(model, "index.html"));
                                 });
                         });
                 })
@@ -160,8 +144,8 @@ public class RatpackPac4jDemo {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
-                    ctx.render(Groovy.groovyTemplate(
-                        Collections.singletonMap("profile", ctx.get(UserProfile.class)),
+                    ctx.render(groovyTemplate(
+                        singletonMap("profile", ctx.get(UserProfile.class)),
                         "protectedIndex.html"
                     ))
             );
