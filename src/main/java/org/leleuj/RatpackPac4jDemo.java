@@ -91,12 +91,12 @@ public class RatpackPac4jDemo {
                         .prefix("basicauth", auth(BasicAuthClient.class))
                         .prefix("cas", auth(CasClient.class))
                         .prefix("saml2", auth(Saml2Client.class))
-                        .path("theForm.html", ctx -> {
+                        .path("theForm.html", ctx ->
                             ctx.render(groovyTemplate(
                                 singletonMap("callbackUrl", formClient.getCallbackUrl()),
                                 "theForm.html"
-                            ));
-                        })
+                            ))
+                        )
                         .path("logout.html", ctx ->
                                 RatpackPac4j.logout(ctx).then(() -> ctx.redirect("index.html"))
                         )
