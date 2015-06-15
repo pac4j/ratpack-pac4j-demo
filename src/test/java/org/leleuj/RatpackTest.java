@@ -36,7 +36,7 @@ public class RatpackTest {
 
         ReceivedResponse response = httpClient.get("form/index.html");
         assertEquals(200, response.getStatusCode());
-        assertThat(response.getBody().getText(), containsString("<form action=\"" + aut.getAddress() + "callback?client_name=FormClient\" method=\"POST\">"));
+        assertThat(response.getBody().getText(), containsString("<form action=\"" + aut.getAddress() + "authenticator?client_name=FormClient\" method=\"POST\">"));
 
         response = httpClient
             .requestSpec(r -> r
@@ -47,7 +47,7 @@ public class RatpackTest {
                     )
             )
             .params(m -> m.put("client_name", "FormClient"))
-            .post("callback");
+            .post("authenticator");
 
         assertThat(response.getBody().getText(), containsString("attributes: {username=foo}"));
         assertEquals(200, response.getStatusCode());

@@ -17,23 +17,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ratpack.error.ClientErrorHandler;
 import ratpack.error.ServerErrorHandler;
-import ratpack.groovy.Groovy;
+import ratpack.func.Action;
 import ratpack.groovy.template.TextTemplateModule;
 import ratpack.guice.Guice;
-import ratpack.handling.Handler;
-import ratpack.handling.Handlers;
+import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
-import ratpack.pac4j.internal.Pac4jSessionKeys;
-import ratpack.pac4j.internal.RatpackWebContext;
 import ratpack.server.RatpackServer;
 import ratpack.server.ServerConfig;
-import ratpack.session.Session;
 import ratpack.session.SessionModule;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+
+import static java.util.Collections.singletonMap;
+import static ratpack.groovy.Groovy.groovyTemplate;
+import static ratpack.handling.Handlers.redirect;
 
 public class RatpackPac4jDemo {
 
@@ -46,8 +45,21 @@ public class RatpackPac4jDemo {
                         .port(8080)
                 )
                 .registry(Guice.registry(b -> b
-                        .bind(ServerErrorHandler.class, AppServerErrorHandler.class)
-                        .bind(ClientErrorHandler.class, AppClientErrorHandler.class)
+                        .bindInstance(ServerErrorHandler.class, (ctx, error) ->
+                                ctx.render(groovyTemplate("error500.html"))
+                        )
+                        .bindInstance(ClientErrorHandler.class, (ctx, statusCode) -> {
+                            ctx.getResponse().status(statusCode);
+                            if (statusCode == 404) {
+                                ctx.render(groovyTemplate("error404.html"));
+                            } else if (statusCode == 401) {
+                                ctx.render(groovyTemplate("error401.html"));
+                            } else if (statusCode == 403) {
+                                ctx.render(groovyTemplate("error403.html"));
+                            } else {
+                                LOGGER.error("Unexpected: {}", statusCode);
+                            }
+                        })
                         .module(TextTemplateModule.class)
                         .module(SessionModule.class)
                 ))
@@ -59,8 +71,8 @@ public class RatpackPac4jDemo {
                     saml2Client.setIdpMetadataPath("resource:testshib-providers.xml");
 
                     final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
-                    final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA",
-                        "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
+                    final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA", "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
+
                     // HTTP
                     final FormClient formClient = new FormClient("/theForm.html", new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
                     final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
@@ -71,86 +83,71 @@ public class RatpackPac4jDemo {
                     casClient.setCasLoginUrl("http://localhost:8888/cas/login");
 
                     chain
-                        .all(RatpackPac4j.callback("callback", formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient))
-                        .path(Handlers.redirect(301, "index.html"))
-                        .all(auth("facebook", FacebookClient.class))
-                        .all(auth("twitter", TwitterClient.class))
-                        .all(auth("form", FormClient.class))
-                        .all(auth("basicauth", BasicAuthClient.class))
-                        .all(auth("cas", CasClient.class))
-                        .all(auth("saml2", Saml2Client.class))
-                        .path("theForm.html", context -> {
-                            context.render(
-                                Groovy.groovyTemplate(
-                                    Collections.singletonMap("callbackUrl", formClient.getCallbackUrl()),
-                                    "theForm.html"
-                                )
-                            );
-                        })
-                        .path("logout.html", context -> {
-                            context.get(Session.class).getData().then(sessionData -> {
-                                sessionData.remove(Pac4jSessionKeys.USER_PROFILE_SESSION_KEY);
-                                context.redirect("index.html");
-                            });
-                        })
-                        .path("index.html", context -> {
+                        .path(redirect(301, "index.html"))
+                        .all(RatpackPac4j.authenticator(formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient))
+                        .prefix("facebook", auth(FacebookClient.class))
+                        .prefix("twitter", auth(TwitterClient.class))
+                        .prefix("form", auth(FormClient.class))
+                        .prefix("basicauth", auth(BasicAuthClient.class))
+                        .prefix("cas", auth(CasClient.class))
+                        .prefix("saml2", auth(Saml2Client.class))
+                        .path("theForm.html", ctx ->
+                            ctx.render(groovyTemplate(
+                                singletonMap("callbackUrl", formClient.getCallbackUrl()),
+                                "theForm.html"
+                            ))
+                        )
+                        .path("logout.html", ctx ->
+                                RatpackPac4j.logout(ctx).then(() -> ctx.redirect("index.html"))
+                        )
+                        .path("index.html", ctx -> {
                             LOGGER.debug("Retrieving user profile...");
-                            context.get(Session.class)
-                                .getData()
-                                .then(sessionData -> {
-                                    Optional<UserProfile> profile = sessionData.get(Pac4jSessionKeys.USER_PROFILE_SESSION_KEY);
-                                    final Map<String, Object> model = Maps.newHashMap();
+                            RatpackPac4j.userProfile(ctx)
+                                .left(RatpackPac4j.webContext(ctx))
+                                .then(pair -> {
+                                    final WebContext webContext = pair.left;
+                                    final Optional<UserProfile> profile = pair.right;
 
+                                    final Map<String, Object> model = Maps.newHashMap();
                                     profile.ifPresent(p -> model.put("profile", p));
 
-                                    final Clients clients = context.get(Clients.class);
-                                    final WebContext webContext = new RatpackWebContext(context, sessionData);
+                                    final Clients clients = ctx.get(Clients.class);
 
                                     final FacebookClient fbclient = clients.findClient(FacebookClient.class);
                                     final String fbUrl = fbclient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("fbUrl: {}", fbUrl);
                                     model.put("facebookUrl", fbUrl);
 
                                     final TwitterClient twClient = clients.findClient(TwitterClient.class);
                                     final String twUrl = twClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("twUrl: {}", twUrl);
                                     model.put("twitterUrl", twUrl);
 
                                     final FormClient fmClient = clients.findClient(FormClient.class);
                                     final String fmUrl = fmClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("fmUrl: {}", fmUrl);
                                     model.put("formUrl", fmUrl);
 
                                     final BasicAuthClient baClient = clients.findClient(BasicAuthClient.class);
                                     final String baUrl = baClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("baUrl: {}", baUrl);
                                     model.put("baUrl", baUrl);
 
                                     final CasClient casClient1 = clients.findClient(CasClient.class);
                                     final String casUrl = casClient1.getRedirectionUrl(webContext);
-                                    LOGGER.debug("casUrl: {}", casUrl);
                                     model.put("casUrl", casUrl);
 
-                                    final Saml2Client samlClient = clients.findClient(Saml2Client.class);
-                                    final String samlUrl = samlClient.getRedirectionUrl(webContext);
-                                    LOGGER.debug("samlUrl: {}", samlUrl);
-
-                                    context.render(Groovy.groovyTemplate(model, "index.html"));
+                                    ctx.render(groovyTemplate(model, "index.html"));
                                 });
                         });
                 })
         );
     }
 
-    private static Handler auth(String prefix, Class<? extends Client<?, ?>> clientClass) {
-        return Handlers.prefix(prefix, Handlers.chain(
-            RatpackPac4j.auth(clientClass),
-            Handlers.path("index.html", ctx ->
-                    ctx.render(Groovy.groovyTemplate(
-                        Collections.singletonMap("profile", ctx.get(UserProfile.class)),
+    private static Action<Chain> auth(Class<? extends Client<?, ?>> clientClass) {
+        return chain -> chain
+            .all(RatpackPac4j.requireAuth(clientClass))
+            .path("index.html", ctx ->
+                    ctx.render(groovyTemplate(
+                        singletonMap("profile", ctx.get(UserProfile.class)),
                         "protectedIndex.html"
                     ))
-            )
-        ));
+            );
     }
 }
