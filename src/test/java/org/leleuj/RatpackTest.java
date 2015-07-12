@@ -31,9 +31,6 @@ public class RatpackTest {
 
     @Test
     public void requiresFormAuth() {
-        // workaround for https://github.com/ratpack/ratpack/issues/694
-        httpClient.get();
-
         ReceivedResponse response = httpClient.get("form/index.html");
         assertEquals(200, response.getStatusCode());
         assertThat(response.getBody().getText(), containsString("<form action=\"" + aut.getAddress() + "authenticator?client_name=FormClient\" method=\"POST\">"));

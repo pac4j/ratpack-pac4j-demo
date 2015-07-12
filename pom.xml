@@ -24,7 +24,7 @@
 
     <properties>
         <pac4jVersion>1.7.0</pac4jVersion>
-        <ratpackVersion>0.9.18-SNAPSHOT</ratpackVersion>
+        <ratpackVersion>0.9.19-SNAPSHOT</ratpackVersion>
     </properties>
 
     <dependencies>
@@ -48,6 +48,7 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.8.2</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.pac4j</groupId>
