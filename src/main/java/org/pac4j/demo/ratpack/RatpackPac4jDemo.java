@@ -1,9 +1,8 @@
-package org.leleuj;
+package org.pac4j.demo.ratpack;
 
 import com.google.appengine.repackaged.com.google.common.collect.Maps;
 import org.pac4j.cas.client.CasClient;
 import org.pac4j.core.client.Client;
-import org.pac4j.core.client.Clients;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.BasicAuthClient;
@@ -23,7 +22,6 @@ import ratpack.guice.Guice;
 import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
 import ratpack.server.RatpackServer;
-import ratpack.server.ServerConfig;
 import ratpack.session.SessionModule;
 
 import java.io.File;
@@ -39,11 +37,10 @@ public class RatpackPac4jDemo {
     private static final Logger LOGGER = LoggerFactory.getLogger(RatpackPac4jDemo.class);
 
     public static void main(final String[] args) throws Exception {
+
+
         RatpackServer.start(server -> server
-                .serverConfig(ServerConfig
-                        .baseDir(new File("src/main"))
-                        .port(8080)
-                )
+                .serverConfig(c -> c.baseDir(new File("src/main").getAbsoluteFile()).port(8080))
                 .registry(Guice.registry(b -> b
                         .bindInstance(ServerErrorHandler.class, (ctx, error) ->
                                 ctx.render(groovyTemplate("error500.html"))
@@ -74,7 +71,7 @@ public class RatpackPac4jDemo {
                     final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA", "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
 
                     // HTTP
-                    final FormClient formClient = new FormClient("/theForm.html", new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
+                    final FormClient formClient = new FormClient("/loginForm.html", new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
                     final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
 
                     // CAS
@@ -91,10 +88,10 @@ public class RatpackPac4jDemo {
                         .prefix("basicauth", auth(BasicAuthClient.class))
                         .prefix("cas", auth(CasClient.class))
                         .prefix("saml2", auth(Saml2Client.class))
-                        .path("theForm.html", ctx ->
+                        .path("loginForm.html", ctx ->
                             ctx.render(groovyTemplate(
                                 singletonMap("callbackUrl", formClient.getCallbackUrl()),
-                                "theForm.html"
+                                "loginForm.html"
                             ))
                         )
                         .path("logout.html", ctx ->
@@ -110,29 +107,6 @@ public class RatpackPac4jDemo {
 
                                     final Map<String, Object> model = Maps.newHashMap();
                                     profile.ifPresent(p -> model.put("profile", p));
-
-                                    final Clients clients = ctx.get(Clients.class);
-
-                                    final FacebookClient fbclient = clients.findClient(FacebookClient.class);
-                                    final String fbUrl = fbclient.getRedirectionUrl(webContext);
-                                    model.put("facebookUrl", fbUrl);
-
-                                    final TwitterClient twClient = clients.findClient(TwitterClient.class);
-                                    final String twUrl = twClient.getRedirectionUrl(webContext);
-                                    model.put("twitterUrl", twUrl);
-
-                                    final FormClient fmClient = clients.findClient(FormClient.class);
-                                    final String fmUrl = fmClient.getRedirectionUrl(webContext);
-                                    model.put("formUrl", fmUrl);
-
-                                    final BasicAuthClient baClient = clients.findClient(BasicAuthClient.class);
-                                    final String baUrl = baClient.getRedirectionUrl(webContext);
-                                    model.put("baUrl", baUrl);
-
-                                    final CasClient casClient1 = clients.findClient(CasClient.class);
-                                    final String casUrl = casClient1.getRedirectionUrl(webContext);
-                                    model.put("casUrl", casUrl);
-
                                     ctx.render(groovyTemplate(model, "index.html"));
                                 });
                         });

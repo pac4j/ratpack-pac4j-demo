@@ -1,14 +1,14 @@
-## What is this project ? [![Build Status](https://travis-ci.org/pac4j/ratpack-pac4j-demo.png?branch=master)](https://travis-ci.org/pac4j/ratpack-pac4j-demo)
+<p align="center">
+  <img src="https://pac4j.github.io/pac4j/img/logo-ratpack.png" width="300" />
+</p>
 
-This **ratpack-pac4j-demo** project is a Java web application to test the [ratpack-pac4j library](https://github.com/ratpack/ratpack/tree/master/ratpack-pac4j) with Facebook, Twitter, form authentication, basic auth, CAS...  
-The **ratpack-pac4j** library is built to delegate authentication to a provider and be authenticated back in the protected application with a complete user profile retrieved from the provider.
+This `ratpack-pac4j-demo` project is a Ratpack web application to test the [ratpack-pac4j](https://github.com/ratpack/ratpack/tree/master/ratpack-pac4j) security module with various authentication mechanisms: Facebook, Twitter, form, basic auth, CAS, SAML, OpenID Connect, JWT...
 
-## Quick start & test
+## Start & test
 
-To start quickly, build the project and launch the web app with jetty :
+Build the project and launch the web app on [http://localhost:8080](http://localhost:8080):
 
     cd ratpack-pac4j-demo
-    mvn exec:java
+    mvn clean compile exec:java
 
-To test, you can call a protected url by clicking on the "Protected by **xxx** : **xxx**/index.jsp" url, which will start the authentication process with the **xxx** provider.  
-Or you can click on the "Authenticate with **xxx**" link, to start manually the authentication process with the **xxx** provider.
+To test, you can call a protected url by clicking on the "Protected url by **xxx**" link, which will start the authentication process with the **xxx** provider.

@@ -1,4 +1,4 @@
-package org.leleuj;
+package org.pac4j.demo.ratpack;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import org.junit.After;
