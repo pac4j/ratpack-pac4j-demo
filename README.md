@@ -12,3 +12,5 @@ Build the project and launch the web app on [http://localhost:8080](http://local
     mvn clean compile exec:java
 
 To test, you can call a protected url by clicking on the "Protected url by **xxx**" link, which will start the authentication process with the **xxx** provider.
+
+## Automatic build [![Build Status](https://travis-ci.org/pac4j/ratpack-pac4j-demo.png?branch=master)](https://travis-ci.org/pac4j/ratpack-pac4j-demo)
