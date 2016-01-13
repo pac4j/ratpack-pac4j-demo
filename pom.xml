@@ -23,8 +23,8 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>1.7.0</pac4jVersion>
-        <ratpackVersion>1.1.1</ratpackVersion>
+        <pac4jVersion>1.8.5-SNAPSHOT</pac4jVersion>
+        <ratpackVersion>1.2.0-SNAPSHOT</ratpackVersion>
         <java.version>1.8</java.version>
     </properties>
 
@@ -75,12 +75,6 @@
             <groupId>org.pac4j</groupId>
             <artifactId>pac4j-cas</artifactId>
             <version>${pac4jVersion}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.pac4j</groupId>
@@ -98,9 +92,29 @@
             <version>${pac4jVersion}</version>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jcl-over-slf4j</artifactId>
-            <version>1.6.4</version>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-ldap</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-sql</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-mongo</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-jwt</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-stormpath</artifactId>
+            <version>${pac4jVersion}</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

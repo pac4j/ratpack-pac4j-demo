@@ -5,13 +5,14 @@ import org.pac4j.cas.client.CasClient;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.UserProfile;
-import org.pac4j.http.client.BasicAuthClient;
-import org.pac4j.http.client.FormClient;
-import org.pac4j.http.credentials.SimpleTestUsernamePasswordAuthenticator;
-import org.pac4j.http.profile.UsernameProfileCreator;
+import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
+import org.pac4j.http.client.indirect.FormClient;
+import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
-import org.pac4j.saml.client.Saml2Client;
+import org.pac4j.oidc.client.OidcClient;
+import org.pac4j.saml.client.SAML2Client;
+import org.pac4j.saml.client.SAML2ClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ratpack.error.ClientErrorHandler;
@@ -42,8 +43,10 @@ public class RatpackPac4jDemo {
         RatpackServer.start(server -> server
                 .serverConfig(c -> c.baseDir(new File("src/main").getAbsoluteFile()).port(8080))
                 .registry(Guice.registry(b -> b
-                        .bindInstance(ServerErrorHandler.class, (ctx, error) ->
-                                ctx.render(groovyTemplate("error500.html"))
+                        .bindInstance(ServerErrorHandler.class, (ctx, error) -> {
+                                LOGGER.error("Unexpected error", error);
+                                ctx.render(groovyTemplate("error500.html"));
+                            }
                         )
                         .bindInstance(ClientErrorHandler.class, (ctx, statusCode) -> {
                             ctx.getResponse().status(statusCode);
@@ -61,33 +64,43 @@ public class RatpackPac4jDemo {
                         .module(SessionModule.class)
                 ))
                 .handlers(chain -> {
-                    final Saml2Client saml2Client = new Saml2Client();
-                    saml2Client.setKeystorePath("resource:samlKeystore.jks");
-                    saml2Client.setKeystorePassword("pac4j-demo-passwd");
-                    saml2Client.setPrivateKeyPassword("pac4j-demo-passwd");
-                    saml2Client.setIdpMetadataPath("resource:testshib-providers.xml");
+                    final OidcClient oidcClient = new OidcClient();
+                    oidcClient.setClientID("343992089165-sp0l1km383i8cbm2j5nn20kbk5dk8hor.apps.googleusercontent.com");
+                    oidcClient.setSecret("uR3D8ej1kIRPbqAFaxIE3HWh");
+                    oidcClient.setDiscoveryURI("https://accounts.google.com/.well-known/openid-configuration");
+                    oidcClient.setUseNonce(true);
+                    //oidcClient.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
+                    oidcClient.addCustomParam("prompt", "consent");
+
+                    final SAML2ClientConfiguration cfg = new SAML2ClientConfiguration("resource:samlKeystore.jks",
+                        "pac4j-demo-passwd",
+                        "pac4j-demo-passwd",
+                        "resource:testshib-providers.xml");
+                    cfg.setMaximumAuthenticationLifetime(3600);
+                    cfg.setServiceProviderEntityId("http://localhost:8080/callback?client_name=SAML2Client");
+                    cfg.setServiceProviderMetadataPath("sp-metadata.xml");
+                    final SAML2Client saml2Client = new SAML2Client(cfg);
 
                     final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
                     final TwitterClient twitterClient = new TwitterClient("CoxUiYwQOSFDReZYdjigBA", "2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs");
 
                     // HTTP
-                    final FormClient formClient = new FormClient("/loginForm.html", new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
-                    final BasicAuthClient basicAuthClient = new BasicAuthClient(new SimpleTestUsernamePasswordAuthenticator(), new UsernameProfileCreator());
+                    final FormClient formClient = new FormClient("/loginForm.html", new SimpleTestUsernamePasswordAuthenticator());
+                    final IndirectBasicAuthClient basicAuthClient = new IndirectBasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
 
                     // CAS
-                    final CasClient casClient = new CasClient();
-                    // casClient.setGateway(true);
-                    casClient.setCasLoginUrl("http://localhost:8888/cas/login");
+                    final CasClient casClient = new CasClient("https://casserverpac4j.herokuapp.com/login");
 
                     chain
                         .path(redirect(301, "index.html"))
-                        .all(RatpackPac4j.authenticator(formClient, formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient))
+                        .all(RatpackPac4j.authenticator(formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient))
                         .prefix("facebook", auth(FacebookClient.class))
                         .prefix("twitter", auth(TwitterClient.class))
                         .prefix("form", auth(FormClient.class))
-                        .prefix("basicauth", auth(BasicAuthClient.class))
+                        .prefix("basicauth", auth(IndirectBasicAuthClient.class))
                         .prefix("cas", auth(CasClient.class))
-                        .prefix("saml2", auth(Saml2Client.class))
+                        .prefix("saml2", auth(SAML2Client.class))
+                        .prefix("oidc", auth(OidcClient.class))
                         .path("loginForm.html", ctx ->
                             ctx.render(groovyTemplate(
                                 singletonMap("callbackUrl", formClient.getCallbackUrl()),
