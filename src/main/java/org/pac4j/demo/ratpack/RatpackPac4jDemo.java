@@ -93,7 +93,7 @@ public class RatpackPac4jDemo {
 
                     chain
                         .path(redirect(301, "index.html"))
-                        .all(RatpackPac4j.authenticator(formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient))
+                        .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient))
                         .prefix("facebook", auth(FacebookClient.class))
                         .prefix("twitter", auth(TwitterClient.class))
                         .prefix("form", auth(FormClient.class))
