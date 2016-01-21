@@ -1,7 +1,10 @@
 package org.pac4j.demo.ratpack;
 
 import com.google.appengine.repackaged.com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
 import org.pac4j.cas.client.CasClient;
+import org.pac4j.core.authorization.Authorizer;
+import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.UserProfile;
@@ -95,6 +98,13 @@ public class RatpackPac4jDemo {
                         .path(redirect(301, "index.html"))
                         .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient))
                         .prefix("facebook", auth(FacebookClient.class))
+                        .prefix("facebookadmin", security(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
+                        .prefix("facebookcustom", security(FacebookClient.class, (ctx, profile) -> {
+                            if (profile == null) {
+                                return false;
+                            }
+                            return StringUtils.startsWith(profile.getId(), "jle");
+                        }))
                         .prefix("twitter", auth(TwitterClient.class))
                         .prefix("form", auth(FormClient.class))
                         .prefix("basicauth", auth(IndirectBasicAuthClient.class))
@@ -131,10 +141,20 @@ public class RatpackPac4jDemo {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
-                    ctx.render(groovyTemplate(
-                        singletonMap("profile", ctx.get(UserProfile.class)),
-                        "protectedIndex.html"
-                    ))
+                ctx.render(groovyTemplate(
+                    singletonMap("profile", ctx.get(UserProfile.class)),
+                    "protectedIndex.html"
+                ))
             );
     }
-}
+
+    private static Action<Chain> security(Class<? extends Client<?, ?>> clientClass, Authorizer<UserProfile>... authorizers) {
+        return chain -> chain
+            .all(RatpackPac4j.security(clientClass, authorizers))
+            .path("index.html", ctx ->
+                ctx.render(groovyTemplate(
+                    singletonMap("profile", ctx.get(UserProfile.class)),
+                    "protectedIndex.html"
+                ))
+            );
+    }}
