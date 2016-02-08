@@ -6,11 +6,16 @@ import org.pac4j.cas.client.CasClient;
 import org.pac4j.core.authorization.Authorizer;
 import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
-import org.pac4j.core.context.WebContext;
+import org.pac4j.core.credentials.Credentials;
+import org.pac4j.core.profile.ProfileManager;
 import org.pac4j.core.profile.UserProfile;
+import org.pac4j.http.client.direct.DirectBasicAuthClient;
+import org.pac4j.http.client.direct.ParameterClient;
 import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.client.indirect.FormClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
+import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
+import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.oidc.client.OidcClient;
@@ -25,6 +30,7 @@ import ratpack.groovy.template.TextTemplateModule;
 import ratpack.guice.Guice;
 import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
+import ratpack.pac4j.internal.RatpackWebContext;
 import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
 
@@ -39,6 +45,8 @@ import static ratpack.handling.Handlers.redirect;
 public class RatpackPac4jDemo {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RatpackPac4jDemo.class);
+
+    private static final String JWT_SALT = "12345678901234567890123456789012";
 
     public static void main(final String[] args) throws Exception {
 
@@ -94,12 +102,20 @@ public class RatpackPac4jDemo {
                     // CAS
                     final CasClient casClient = new CasClient("https://casserverpac4j.herokuapp.com/login");
 
+                    // direct clients
+                    final ParameterClient parameterClient = new ParameterClient("token", new JwtAuthenticator(JWT_SALT));
+                    parameterClient.setSupportGetRequest(true);
+                    parameterClient.setSupportPostRequest(false);
+
+                    // basic auth
+                    final DirectBasicAuthClient directBasicAuthClient = new DirectBasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
+
                     chain
                         .path(redirect(301, "index.html"))
-                        .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient))
+                        .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
                         .prefix("facebook", auth(FacebookClient.class))
-                        .prefix("facebookadmin", security(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
-                        .prefix("facebookcustom", security(FacebookClient.class, (ctx, profile) -> {
+                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
+                        .prefix("facebookcustom", auth(FacebookClient.class, (ctx, profile) -> {
                             if (profile == null) {
                                 return false;
                             }
@@ -111,6 +127,22 @@ public class RatpackPac4jDemo {
                         .prefix("cas", auth(CasClient.class))
                         .prefix("saml2", auth(SAML2Client.class))
                         .prefix("oidc", auth(OidcClient.class))
+                        .prefix("dba", auth(DirectBasicAuthClient.class))
+                        .prefix("rest-jwt", auth(ParameterClient.class))
+                        .path("jwt.html", ctx -> {
+                            final Map<String, Object> model = Maps.newHashMap();
+                            RatpackPac4j.userProfile(ctx)
+                                .route(Optional::isPresent, p -> {
+                                    final JwtGenerator generator = new JwtGenerator(JWT_SALT);
+                                    final String token = generator.generate(p.get());
+                                    model.put("token", token);
+                                    ctx.render(groovyTemplate(model, "jwt.html"));
+                                })
+                                .then(p -> {
+                                    ctx.render(groovyTemplate(model, "jwt.html"));
+                                });
+                            }
+                        )
                         .path("loginForm.html", ctx ->
                             ctx.render(groovyTemplate(
                                 singletonMap("callbackUrl", formClient.getCallbackUrl()),
@@ -122,14 +154,13 @@ public class RatpackPac4jDemo {
                         )
                         .path("index.html", ctx -> {
                             LOGGER.debug("Retrieving user profile...");
+                            final Map<String, Object> model = Maps.newHashMap();
                             RatpackPac4j.userProfile(ctx)
-                                .left(RatpackPac4j.webContext(ctx))
-                                .then(pair -> {
-                                    final WebContext webContext = pair.left;
-                                    final Optional<UserProfile> profile = pair.right;
-
-                                    final Map<String, Object> model = Maps.newHashMap();
-                                    profile.ifPresent(p -> model.put("profile", p));
+                                .route(Optional::isPresent, p -> {
+                                    model.put("profile", p);
+                                    ctx.render(groovyTemplate(model, "index.html"));
+                                })
+                                .then(p -> {
                                     ctx.render(groovyTemplate(model, "index.html"));
                                 });
                         });
@@ -137,7 +168,7 @@ public class RatpackPac4jDemo {
         );
     }
 
-    private static Action<Chain> auth(Class<? extends Client<?, ?>> clientClass) {
+    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
@@ -148,13 +179,14 @@ public class RatpackPac4jDemo {
             );
     }
 
-    private static Action<Chain> security(Class<? extends Client<?, ?>> clientClass, Authorizer<UserProfile>... authorizers) {
+    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass, Authorizer<? super U>... authorizers) {
         return chain -> chain
-            .all(RatpackPac4j.security(clientClass, authorizers))
+            .all(RatpackPac4j.requireAuth(clientClass, authorizers))
             .path("index.html", ctx ->
                 ctx.render(groovyTemplate(
                     singletonMap("profile", ctx.get(UserProfile.class)),
                     "protectedIndex.html"
                 ))
             );
-    }}
+    }
+}

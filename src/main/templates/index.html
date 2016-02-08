@@ -9,6 +9,10 @@
 <a href="saml2/index.html">Protected url by SAML: saml2/index.html</a> (use a real account)<br />
 <a href="oidc/index.html">Protected url by Google OpenID Connect: oidc/index.html</a> (use a real account)<br />
 <br />
+<a href="jwt.html">Generate a JWT token</a> (after being authenticated)<br />
+<a href="/dba/index.html">Protected url by DirectBasicAuthClient: /dba/index.jsp</a> (POST the <em>Authorization</em> header with value: <em>Basic amxlbGV1OmpsZWxldQ==</em>)<br />
+<a href="/rest-jwt/index.html">Protected url by ParameterClient: /rest-jwt/index.jsp</a> (with request parameter: token=<em>jwt_generated_token</em>)<br />
+<br />
 <a href="logout.html">logout</a>
 <br /><br />
 profile : ${model.profile}
