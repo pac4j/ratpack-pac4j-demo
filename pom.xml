@@ -23,8 +23,8 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>1.8.5-SNAPSHOT</pac4jVersion>
-        <ratpackVersion>1.2.0-SNAPSHOT</ratpackVersion>
+        <pac4jVersion>1.8.6</pac4jVersion>
+        <ratpackVersion>1.2.0</ratpackVersion>
         <java.version>1.8</java.version>
     </properties>
 
