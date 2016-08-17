@@ -1,14 +1,12 @@
 package org.pac4j.demo.ratpack;
 
 import com.google.appengine.repackaged.com.google.common.collect.Maps;
-import org.apache.commons.lang3.StringUtils;
 import org.pac4j.cas.client.CasClient;
-import org.pac4j.core.authorization.Authorizer;
-import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
+import org.pac4j.core.authorization.authorizer.Authorizer;
+import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.credentials.Credentials;
-import org.pac4j.core.profile.ProfileManager;
-import org.pac4j.core.profile.UserProfile;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
 import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
@@ -19,6 +17,7 @@ import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.oidc.client.OidcClient;
+import org.pac4j.oidc.profile.OidcProfile;
 import org.pac4j.saml.client.SAML2Client;
 import org.pac4j.saml.client.SAML2ClientConfiguration;
 import org.slf4j.Logger;
@@ -30,7 +29,6 @@ import ratpack.groovy.template.TextTemplateModule;
 import ratpack.guice.Guice;
 import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
-import ratpack.pac4j.internal.RatpackWebContext;
 import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
 
@@ -75,13 +73,14 @@ public class RatpackPac4jDemo {
                         .module(SessionModule.class)
                 ))
                 .handlers(chain -> {
-                    final OidcClient oidcClient = new OidcClient();
+                    final OidcClientProfile oidcClient = new OidcClientProfile();
                     oidcClient.setClientID("343992089165-sp0l1km383i8cbm2j5nn20kbk5dk8hor.apps.googleusercontent.com");
                     oidcClient.setSecret("uR3D8ej1kIRPbqAFaxIE3HWh");
                     oidcClient.setDiscoveryURI("https://accounts.google.com/.well-known/openid-configuration");
                     oidcClient.setUseNonce(true);
                     //oidcClient.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
                     oidcClient.addCustomParam("prompt", "consent");
+                    oidcClient.setAuthorizationGenerator(profile -> profile.addRole("ROLE_ADMIN"));
 
                     final SAML2ClientConfiguration cfg = new SAML2ClientConfiguration("resource:samlKeystore.jks",
                         "pac4j-demo-passwd",
@@ -114,19 +113,14 @@ public class RatpackPac4jDemo {
                         .path(redirect(301, "index.html"))
                         .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
                         .prefix("facebook", auth(FacebookClient.class))
-                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
-                        .prefix("facebookcustom", auth(FacebookClient.class, (ctx, profile) -> {
-                            if (profile == null) {
-                                return false;
-                            }
-                            return StringUtils.startsWith(profile.getId(), "jle");
-                        }))
+                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<>("ROLE_ADMIN")))
+                        .prefix("facebookcustom", auth(FacebookClient.class, new CustomAuthorizer()))
                         .prefix("twitter", auth(TwitterClient.class))
                         .prefix("form", auth(FormClient.class))
                         .prefix("basicauth", auth(IndirectBasicAuthClient.class))
                         .prefix("cas", auth(CasClient.class))
                         .prefix("saml2", auth(SAML2Client.class))
-                        .prefix("oidc", auth(OidcClient.class))
+                        .prefix("oidc", auth(OidcClientProfile.class))
                         .prefix("dba", auth(DirectBasicAuthClient.class))
                         .prefix("rest-jwt", auth(ParameterClient.class))
                         .path("jwt.html", ctx -> {
@@ -168,23 +162,30 @@ public class RatpackPac4jDemo {
         );
     }
 
-    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass) {
+    private static class OidcClientProfile extends OidcClient<OidcProfile> {
+
+        public OidcClientProfile() {
+            setName("OidcClient");
+        }
+    }
+
+    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
                 ctx.render(groovyTemplate(
-                    singletonMap("profile", ctx.get(UserProfile.class)),
+                    singletonMap("profile", ctx.get(CommonProfile.class)),
                     "protectedIndex.html"
                 ))
             );
     }
 
-    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass, Authorizer<? super U>... authorizers) {
+    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass, Authorizer<? super U>... authorizers) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass, authorizers))
             .path("index.html", ctx ->
                 ctx.render(groovyTemplate(
-                    singletonMap("profile", ctx.get(UserProfile.class)),
+                    singletonMap("profile", ctx.get(CommonProfile.class)),
                     "protectedIndex.html"
                 ))
             );

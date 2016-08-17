@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.pac4j.demo</groupId>
     <artifactId>ratpack-pac4j-demo</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>ratpack-pac4j demo</name>
 
@@ -23,8 +23,8 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>1.8.6</pac4jVersion>
-        <ratpackVersion>1.2.0</ratpackVersion>
+        <pac4jVersion>1.9.1</pac4jVersion>
+        <ratpackVersion>1.5.0-SNAPSHOT</ratpackVersion>
         <java.version>1.8</java.version>
     </properties>
 
@@ -127,7 +127,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.5.1</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -136,7 +136,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.4.0</version>
+                <version>1.5.0</version>
                 <executions>
                     <execution>
                         <goals>
