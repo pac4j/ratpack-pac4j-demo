@@ -7,7 +7,6 @@ import org.pac4j.core.authorization.Authorizer;
 import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.credentials.Credentials;
-import org.pac4j.core.profile.ProfileManager;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
@@ -30,7 +29,6 @@ import ratpack.groovy.template.TextTemplateModule;
 import ratpack.guice.Guice;
 import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
-import ratpack.pac4j.internal.RatpackWebContext;
 import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
 

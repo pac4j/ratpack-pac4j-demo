@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.pac4j.demo</groupId>
     <artifactId>ratpack-pac4j-demo</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.4.6-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>ratpack-pac4j demo</name>
 
@@ -23,8 +23,8 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>1.8.6</pac4jVersion>
-        <ratpackVersion>1.2.0</ratpackVersion>
+        <pac4jVersion>1.8.9</pac4jVersion>
+        <ratpackVersion>1.4.6</ratpackVersion>
         <java.version>1.8</java.version>
     </properties>
 
@@ -53,6 +53,12 @@
             <groupId>org.pac4j</groupId>
             <artifactId>pac4j-oauth</artifactId>
             <version>${pac4jVersion}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.pac4j</groupId>
@@ -63,6 +69,12 @@
             <groupId>org.pac4j</groupId>
             <artifactId>pac4j-saml</artifactId>
             <version>${pac4jVersion}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.pac4j</groupId>
@@ -105,11 +117,6 @@
             <version>${pac4jVersion}</version>
         </dependency>
         <dependency>
-            <groupId>org.pac4j</groupId>
-            <artifactId>pac4j-stormpath</artifactId>
-            <version>${pac4jVersion}</version>
-        </dependency>
-        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.0.13</version>
@@ -127,7 +134,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.6.1</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -136,7 +143,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.4.0</version>
+                <version>1.6.0</version>
                 <executions>
                     <execution>
                         <goals>
