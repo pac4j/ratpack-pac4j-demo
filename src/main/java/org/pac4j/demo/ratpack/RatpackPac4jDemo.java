@@ -6,6 +6,7 @@ import org.pac4j.cas.client.CasClient;
 import org.pac4j.core.authorization.Authorizer;
 import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
+import org.pac4j.core.context.WebContext;
 import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
@@ -17,6 +18,7 @@ import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
 import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
+import org.pac4j.oauth.profile.facebook.FacebookProfile;
 import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.saml.client.SAML2Client;
 import org.pac4j.saml.client.SAML2ClientConfiguration;
@@ -87,7 +89,7 @@ public class RatpackPac4jDemo {
                         "resource:testshib-providers.xml");
                     cfg.setMaximumAuthenticationLifetime(3600);
                     cfg.setServiceProviderEntityId("http://localhost:8080/callback?client_name=SAML2Client");
-                    cfg.setServiceProviderMetadataPath("sp-metadata.xml");
+                    cfg.setServiceProviderMetadataPath("sp-metadata-ratpack.xml");
                     final SAML2Client saml2Client = new SAML2Client(cfg);
 
                     final FacebookClient facebookClient = new FacebookClient("145278422258960", "be21409ba8f39b5dae2a7de525484da8");
@@ -113,11 +115,14 @@ public class RatpackPac4jDemo {
                         .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
                         .prefix("facebook", auth(FacebookClient.class))
                         .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
-                        .prefix("facebookcustom", auth(FacebookClient.class, (ctx, profile) -> {
-                            if (profile == null) {
-                                return false;
+                        .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer<UserProfile>() {
+                            @Override
+                            public boolean isAuthorized(WebContext webContext, UserProfile profile) {
+                                if (profile == null) {
+                                    return false;
+                                }
+                                return StringUtils.startsWith(profile.getId(), "jle");
                             }
-                            return StringUtils.startsWith(profile.getId(), "jle");
                         }))
                         .prefix("twitter", auth(TwitterClient.class))
                         .prefix("form", auth(FormClient.class))

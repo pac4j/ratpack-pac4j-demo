@@ -12,7 +12,7 @@
         <repository>
             <id>sonatype-nexus-snapshots</id>
             <name>Sonatype Nexus Snapshots</name>
-            <url>https://oss.jfrog.org/repo</url>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
@@ -30,9 +30,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.ratpack</groupId>
+            <groupId>org.pac4j</groupId>
             <artifactId>ratpack-pac4j</artifactId>
-            <version>${ratpackVersion}</version>
+            <version>1.4.6-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.ratpack</groupId>
@@ -158,4 +158,3 @@
         </plugins>
     </build>
 </project>
-
