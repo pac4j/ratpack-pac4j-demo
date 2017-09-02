@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.pac4j.demo</groupId>
     <artifactId>ratpack-pac4j-demo</artifactId>
-    <version>1.4.6-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>ratpack-pac4j demo</name>
 
@@ -23,8 +23,9 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>1.8.9</pac4jVersion>
+        <pac4jVersion>2.1.0</pac4jVersion>
         <ratpackVersion>1.4.6</ratpackVersion>
+        <ratpackPac4jVersion>2.0.0-SNAPSHOT</ratpackPac4jVersion>
         <java.version>1.8</java.version>
     </properties>
 
@@ -32,7 +33,7 @@
         <dependency>
             <groupId>org.pac4j</groupId>
             <artifactId>ratpack-pac4j</artifactId>
-            <version>1.4.6-SNAPSHOT</version>
+            <version>${ratpackPac4jVersion}</version>
         </dependency>
         <dependency>
             <groupId>io.ratpack</groupId>
@@ -114,6 +115,16 @@
         <dependency>
             <groupId>org.pac4j</groupId>
             <artifactId>pac4j-jwt</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-kerberos</artifactId>
+            <version>${pac4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pac4j</groupId>
+            <artifactId>pac4j-couch</artifactId>
             <version>${pac4jVersion}</version>
         </dependency>
         <dependency>
