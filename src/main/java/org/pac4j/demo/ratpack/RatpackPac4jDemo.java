@@ -3,23 +3,30 @@ package org.pac4j.demo.ratpack;
 import com.google.appengine.repackaged.com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.pac4j.cas.client.CasClient;
-import org.pac4j.core.authorization.Authorizer;
-import org.pac4j.core.authorization.RequireAnyRoleAuthorizer;
+import org.pac4j.cas.config.CasConfiguration;
+import org.pac4j.core.authorization.authorizer.Authorizer;
+import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.credentials.Credentials;
+import org.pac4j.core.exception.HttpAction;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
 import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.client.indirect.FormClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
+import org.pac4j.jwt.config.encryption.EncryptionConfiguration;
+import org.pac4j.jwt.config.encryption.SecretEncryptionConfiguration;
+import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
+import org.pac4j.jwt.config.signature.SignatureConfiguration;
 import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
 import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
-import org.pac4j.oauth.profile.facebook.FacebookProfile;
 import org.pac4j.oidc.client.OidcClient;
+import org.pac4j.oidc.config.OidcConfiguration;
 import org.pac4j.saml.client.SAML2Client;
 import org.pac4j.saml.client.SAML2ClientConfiguration;
 import org.slf4j.Logger;
@@ -35,6 +42,8 @@ import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -49,7 +58,6 @@ public class RatpackPac4jDemo {
     private static final String JWT_SALT = "12345678901234567890123456789012";
 
     public static void main(final String[] args) throws Exception {
-
 
         RatpackServer.start(server -> server
                 .serverConfig(c -> c.baseDir(new File("src/main").getAbsoluteFile()).port(8080))
@@ -75,18 +83,23 @@ public class RatpackPac4jDemo {
                         .module(SessionModule.class)
                 ))
                 .handlers(chain -> {
-                    final OidcClient oidcClient = new OidcClient();
-                    oidcClient.setClientID("343992089165-sp0l1km383i8cbm2j5nn20kbk5dk8hor.apps.googleusercontent.com");
-                    oidcClient.setSecret("uR3D8ej1kIRPbqAFaxIE3HWh");
-                    oidcClient.setDiscoveryURI("https://accounts.google.com/.well-known/openid-configuration");
-                    oidcClient.setUseNonce(true);
-                    //oidcClient.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
-                    oidcClient.addCustomParam("prompt", "consent");
+                    final OidcConfiguration oidcConfig = new OidcConfiguration();
+                    oidcConfig.setClientId("343992089165-sp0l1km383i8cbm2j5nn20kbk5dk8hor.apps.googleusercontent.com");
+                    oidcConfig.setSecret("uR3D8ej1kIRPbqAFaxIE3HWh");
+                    oidcConfig.setUseNonce(true);
+                    oidcConfig.setDiscoveryURI("https://accounts.google.com/.well-known/openid-configuration");
+                    //oidcConfig.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
+                    oidcConfig.addCustomParam("prompt", "consent");
+                    final OidcClient oidcClient = new OidcClient(oidcConfig);
+                    oidcClient.setAuthorizationGenerator((webCtx, profile) -> {
+                        profile.addRole("ROLE_ADMIN");
+                        return profile;
+                    });
 
                     final SAML2ClientConfiguration cfg = new SAML2ClientConfiguration("resource:samlKeystore.jks",
                         "pac4j-demo-passwd",
                         "pac4j-demo-passwd",
-                        "resource:testshib-providers.xml");
+                        "resource:metadata-okta.xml");
                     cfg.setMaximumAuthenticationLifetime(3600);
                     cfg.setServiceProviderEntityId("http://localhost:8080/callback?client_name=SAML2Client");
                     cfg.setServiceProviderMetadataPath("sp-metadata-ratpack.xml");
@@ -100,10 +113,13 @@ public class RatpackPac4jDemo {
                     final IndirectBasicAuthClient basicAuthClient = new IndirectBasicAuthClient(new SimpleTestUsernamePasswordAuthenticator());
 
                     // CAS
-                    final CasClient casClient = new CasClient("https://casserverpac4j.herokuapp.com/login");
+                    final CasClient casClient = new CasClient(new CasConfiguration("https://casserverpac4j.herokuapp.com/login"));
 
                     // direct clients
-                    final ParameterClient parameterClient = new ParameterClient("token", new JwtAuthenticator(JWT_SALT));
+                    final SignatureConfiguration signatureConfiguration = new SecretSignatureConfiguration(JWT_SALT);
+                    final EncryptionConfiguration encryptionConfiguration = new SecretEncryptionConfiguration(JWT_SALT);
+                    final JwtAuthenticator jwtAuthenticator = new JwtAuthenticator(Arrays.asList(signatureConfiguration), Arrays.asList(encryptionConfiguration));
+                    final ParameterClient parameterClient = new ParameterClient("token", jwtAuthenticator);
                     parameterClient.setSupportGetRequest(true);
                     parameterClient.setSupportPostRequest(false);
 
@@ -114,14 +130,14 @@ public class RatpackPac4jDemo {
                         .path(redirect(301, "index.html"))
                         .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
                         .prefix("facebook", auth(FacebookClient.class))
-                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<UserProfile>("ROLE_ADMIN")))
-                        .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer<UserProfile>() {
+                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<CommonProfile>("ROLE_ADMIN")))
+                        .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer<CommonProfile>() {
                             @Override
-                            public boolean isAuthorized(WebContext webContext, UserProfile profile) {
-                                if (profile == null) {
+                            public boolean isAuthorized(WebContext webContext, List<CommonProfile> profiles) throws HttpAction {
+                                if (profiles == null || profiles.size() == 0) {
                                     return false;
                                 }
-                                return StringUtils.startsWith(profile.getId(), "jle");
+                                return StringUtils.startsWith(profiles.get(0).getId(), "jle");
                             }
                         }))
                         .prefix("twitter", auth(TwitterClient.class))
@@ -136,7 +152,7 @@ public class RatpackPac4jDemo {
                             final Map<String, Object> model = Maps.newHashMap();
                             RatpackPac4j.userProfile(ctx)
                                 .route(Optional::isPresent, p -> {
-                                    final JwtGenerator generator = new JwtGenerator(JWT_SALT);
+                                    final JwtGenerator generator = new JwtGenerator(signatureConfiguration, encryptionConfiguration);
                                     final String token = generator.generate(p.get());
                                     model.put("token", token);
                                     ctx.render(groovyTemplate(model, "jwt.html"));
@@ -171,7 +187,7 @@ public class RatpackPac4jDemo {
         );
     }
 
-    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass) {
+    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client> clientClass) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
@@ -182,7 +198,7 @@ public class RatpackPac4jDemo {
             );
     }
 
-    private static <C extends Credentials, U extends UserProfile> Action<Chain> auth(Class<? extends Client<C, U>> clientClass, Authorizer<? super U>... authorizers) {
+    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client> clientClass, Authorizer<? super U>... authorizers) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass, authorizers))
             .path("index.html", ctx ->
