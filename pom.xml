@@ -20,11 +20,21 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <properties>
         <pac4jVersion>2.1.0</pac4jVersion>
-        <ratpackVersion>1.4.6</ratpackVersion>
+        <ratpackVersion>1.5.0</ratpackVersion>
         <ratpackPac4jVersion>2.0.0-SNAPSHOT</ratpackPac4jVersion>
         <java.version>1.8</java.version>
     </properties>

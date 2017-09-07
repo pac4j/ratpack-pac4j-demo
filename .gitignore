@@ -6,4 +6,4 @@ test-output/
 bin/
 .idea
 *.iml
-sp-metadata.xml
+sp-metadata*.xml
