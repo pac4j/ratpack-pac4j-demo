@@ -164,7 +164,7 @@ public class RatpackPac4jDemo {
                         )
                         .path("loginForm.html", ctx ->
                             ctx.render(groovyTemplate(
-                                singletonMap("callbackUrl", formClient.getCallbackUrl()),
+                                singletonMap("callbackUrl", formClient.getCallbackUrl() + "?client_name=FormClient"),
                                 "loginForm.html"
                             ))
                         )
