@@ -1,6 +1,7 @@
 package org.pac4j.demo.ratpack;
 
 import com.google.appengine.repackaged.com.google.common.collect.Maps;
+import com.google.inject.AbstractModule;
 import org.apache.commons.lang3.StringUtils;
 import org.pac4j.cas.client.CasClient;
 import org.pac4j.cas.config.CasConfiguration;
@@ -8,14 +9,16 @@ import org.pac4j.core.authorization.authorizer.Authorizer;
 import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.context.WebContext;
+import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.credentials.Credentials;
-import org.pac4j.core.exception.HttpAction;
+import org.pac4j.core.exception.http.HttpAction;
+import org.pac4j.core.profile.BasicUserProfile;
 import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
-import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.client.indirect.FormClient;
+import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.jwt.config.encryption.EncryptionConfiguration;
 import org.pac4j.jwt.config.encryption.SecretEncryptionConfiguration;
@@ -28,7 +31,7 @@ import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.oidc.config.OidcConfiguration;
 import org.pac4j.saml.client.SAML2Client;
-import org.pac4j.saml.client.SAML2ClientConfiguration;
+import org.pac4j.saml.config.SAML2Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ratpack.error.ClientErrorHandler;
@@ -81,6 +84,12 @@ public class RatpackPac4jDemo {
                         })
                         .module(TextTemplateModule.class)
                         .module(SessionModule.class)
+                    .module(new AbstractModule() {
+                        @Override
+                        protected void configure() {
+                            SessionModule.allowTypes(binder(), CommonProfile.class, BasicUserProfile.class);
+                        }
+                    })
                 ))
                 .handlers(chain -> {
                     final OidcConfiguration oidcConfig = new OidcConfiguration();
@@ -91,12 +100,12 @@ public class RatpackPac4jDemo {
                     //oidcConfig.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
                     oidcConfig.addCustomParam("prompt", "consent");
                     final OidcClient oidcClient = new OidcClient(oidcConfig);
-                    oidcClient.setAuthorizationGenerator((webCtx, profile) -> {
+                    oidcClient.setAuthorizationGenerator((webCtx, store, profile) -> {
                         profile.addRole("ROLE_ADMIN");
-                        return profile;
+                        return Optional.of(profile);
                     });
 
-                    final SAML2ClientConfiguration cfg = new SAML2ClientConfiguration("resource:samlKeystore.jks",
+                    final SAML2Configuration  cfg = new SAML2Configuration("resource:samlKeystore.jks",
                         "pac4j-demo-passwd",
                         "pac4j-demo-passwd",
                         "resource:metadata-okta.xml");
@@ -130,10 +139,11 @@ public class RatpackPac4jDemo {
                         .path(redirect(301, "index.html"))
                         .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient, basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
                         .prefix("facebook", auth(FacebookClient.class))
-                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer<CommonProfile>("ROLE_ADMIN")))
-                        .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer<CommonProfile>() {
+                        .prefix("facebookadmin", auth(FacebookClient.class, new RequireAnyRoleAuthorizer("ROLE_ADMIN")))
+                        .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer() {
                             @Override
-                            public boolean isAuthorized(WebContext webContext, List<CommonProfile> profiles) throws HttpAction {
+                            public boolean isAuthorized(WebContext context, SessionStore sessionStore,
+                                List<UserProfile> profiles) {
                                 if (profiles == null || profiles.size() == 0) {
                                     return false;
                                 }
@@ -187,7 +197,7 @@ public class RatpackPac4jDemo {
         );
     }
 
-    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client> clientClass) {
+    private static Action<Chain> auth(Class<? extends Client> clientClass) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass))
             .path("index.html", ctx ->
@@ -198,7 +208,7 @@ public class RatpackPac4jDemo {
             );
     }
 
-    private static <C extends Credentials, U extends CommonProfile> Action<Chain> auth(Class<? extends Client> clientClass, Authorizer<? super U>... authorizers) {
+    private static Action<Chain> auth(Class<? extends Client> clientClass, Authorizer... authorizers) {
         return chain -> chain
             .all(RatpackPac4j.requireAuth(clientClass, authorizers))
             .path("index.html", ctx ->
