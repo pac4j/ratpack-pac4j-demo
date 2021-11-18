@@ -10,10 +10,6 @@ import org.pac4j.core.authorization.authorizer.RequireAnyRoleAuthorizer;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.session.SessionStore;
-import org.pac4j.core.credentials.Credentials;
-import org.pac4j.core.exception.http.HttpAction;
-import org.pac4j.core.profile.BasicUserProfile;
-import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
@@ -43,12 +39,10 @@ import ratpack.handling.Chain;
 import ratpack.pac4j.RatpackPac4j;
 import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
+import ratpack.session.SessionTypeFilter;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Collections.singletonMap;
 import static ratpack.groovy.Groovy.groovyTemplate;
@@ -87,7 +81,7 @@ public class RatpackPac4jDemo {
                     .module(new AbstractModule() {
                         @Override
                         protected void configure() {
-                            SessionModule.allowTypes(binder(), CommonProfile.class, BasicUserProfile.class);
+                            binder().bind(SessionTypeFilter.class).toInstance(SessionTypeFilter.unsafeAllowAll());
                         }
                     })
                 ))
