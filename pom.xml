@@ -35,10 +35,10 @@
     </repositories>
 
     <properties>
-        <pac4jVersion>5.1.4</pac4jVersion>
+        <pac4jVersion>6.0.0</pac4jVersion>
         <ratpackVersion>1.9.0</ratpackVersion>
-        <ratpackPac4jVersion>4.0.0-SNAPSHOT</ratpackPac4jVersion>
-        <java.version>11</java.version>
+        <ratpackPac4jVersion>5.0.0-SNAPSHOT</ratpackPac4jVersion>
+        <java.version>17</java.version>
     </properties>
 
     <dependencies>
