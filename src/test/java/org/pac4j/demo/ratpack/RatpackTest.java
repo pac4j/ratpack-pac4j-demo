@@ -1,5 +1,9 @@
 package org.pac4j.demo.ratpack;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.matchers.JUnitMatchers.containsString;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import org.junit.After;
 import org.junit.Test;
@@ -7,10 +11,6 @@ import ratpack.http.client.ReceivedResponse;
 import ratpack.test.CloseableApplicationUnderTest;
 import ratpack.test.MainClassApplicationUnderTest;
 import ratpack.test.http.TestHttpClient;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.matchers.JUnitMatchers.containsString;
 
 public class RatpackTest {
 
@@ -46,7 +46,7 @@ public class RatpackTest {
             .params(m -> m.put("client_name", "FormClient"))
             .post("callback");
 
-        assertThat(response.getBody().getText(), containsString("attributes: {username=foo}"));
+        assertThat(response.getBody().getText(), containsString("attributes={username=foo}"));
         assertEquals(200, response.getStatusCode());
     }
 }
