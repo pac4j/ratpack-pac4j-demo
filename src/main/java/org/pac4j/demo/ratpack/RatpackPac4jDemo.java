@@ -3,7 +3,8 @@ package org.pac4j.demo.ratpack;
 import static java.util.Collections.singletonMap;
 import static ratpack.handling.Handlers.redirect;
 
-import com.google.appengine.repackaged.com.google.common.collect.Maps;
+import java.util.HashMap;
+import java.util.Collections;
 import com.google.inject.AbstractModule;
 import java.io.File;
 import java.util.Arrays;
@@ -47,6 +48,7 @@ import ratpack.render.Renderer;
 import ratpack.server.RatpackServer;
 import ratpack.session.SessionModule;
 import ratpack.session.SessionTypeFilter;
+import static ratpack.handling.Handlers.redirect;
 
 public class RatpackPac4jDemo {
 
@@ -102,7 +104,7 @@ public class RatpackPac4jDemo {
           //oidcConfig.setPreferredJwsAlgorithm(JWSAlgorithm.RS256);
           oidcConfig.addCustomParam("prompt", "consent");
           final OidcClient oidcClient = new OidcClient(oidcConfig);
-          oidcClient.setAuthorizationGenerator((ctx, profile) -> {
+          oidcClient.setAuthorizationGenerator((ctx, sessionStore, profile) -> {
             profile.addRole("ROLE_ADMIN");
             return Optional.of(profile);
           });
@@ -147,10 +149,10 @@ public class RatpackPac4jDemo {
               .path(redirect(301, "index.html"))
               .all(RatpackPac4j.authenticator("callback", formClient, saml2Client, facebookClient, twitterClient,
                   basicAuthClient, casClient, oidcClient, parameterClient, directBasicAuthClient))
-              .prefix("facebook", auth(facebookClient.getName()))
+              .prefix("facebook", auth(FacebookClient.class))
               .prefix("facebookadmin",
-                  auth(facebookClient.getName(), new RequireAnyRoleAuthorizer("ROLE_ADMIN")))
-              .prefix("facebookcustom", auth(facebookClient.getName(), new Authorizer() {
+                  auth(FacebookClient.class, new RequireAnyRoleAuthorizer("ROLE_ADMIN")))
+              .prefix("facebookcustom", auth(FacebookClient.class, new Authorizer() {
                 @Override
                 public boolean isAuthorized(WebContext context, SessionStore sessionStore,
                     List<UserProfile> profiles) {
@@ -160,16 +162,16 @@ public class RatpackPac4jDemo {
                   return StringUtils.startsWith(profiles.get(0).getId(), "jle");
                 }
               }))
-              .prefix("twitter", auth(twitterClient.getName()))
-              .prefix("form", auth(formClient.getName()))
-              .prefix("basicauth", auth(basicAuthClient.getName()))
-              .prefix("cas", auth(casClient.getName()))
-              .prefix("saml2", auth(saml2Client.getName()))
-              .prefix("oidc", auth(oidcClient.getName()))
-              .prefix("dba", auth(directBasicAuthClient.getName()))
-              .prefix("rest-jwt", auth(parameterClient.getName()))
+              .prefix("twitter", auth(TwitterClient.class))
+              .prefix("form", auth(FormClient.class))
+              .prefix("basicauth", auth(IndirectBasicAuthClient.class))
+              .prefix("cas", auth(CasClient.class))
+              .prefix("saml2", auth(SAML2Client.class))
+              .prefix("oidc", auth(OidcClient.class))
+              .prefix("dba", auth(DirectBasicAuthClient.class))
+              .prefix("rest-jwt", auth(ParameterClient.class))
               .path("jwt.html", ctx -> {
-                    final Map<String, Object> model = Maps.newHashMap();
+                    final Map<String, Object> model = new HashMap<>();
                     RatpackPac4j.userProfile(ctx)
                         .route(Optional::isPresent, p -> {
                           final JwtGenerator generator = new JwtGenerator(signatureConfiguration, encryptionConfiguration);
@@ -185,7 +187,7 @@ public class RatpackPac4jDemo {
               .path("loginForm.html", ctx ->
                   ctx.render(template(
                       "loginForm.html",
-                      singletonMap("callbackUrl", formClient.getCallbackUrl() + "?client_name=FormClient")
+                      Collections.singletonMap("callbackUrl", formClient.getCallbackUrl() + "?client_name=FormClient")
                   ))
               )
               .path("logout.html", ctx ->
@@ -193,7 +195,7 @@ public class RatpackPac4jDemo {
               )
               .path("index.html", ctx -> {
                 LOGGER.debug("Retrieving user profile...");
-                final Map<String, Object> model = Maps.newHashMap();
+                final Map<String, Object> model = new HashMap<>();
                 RatpackPac4j.userProfile(ctx)
                     .route(Optional::isPresent, p -> {
                       model.put("profile", p);
@@ -207,24 +209,24 @@ public class RatpackPac4jDemo {
     );
   }
 
-  private static Action<Chain> auth(String clientName) {
+  private static <T extends org.pac4j.core.client.Client> Action<Chain> auth(Class<T> clientClass) {
     return chain -> chain
-        .all(RatpackPac4j.requireAuth(clientName))
+        .all(RatpackPac4j.requireAuth(clientClass))
         .path("index.html", ctx ->
             ctx.render(template(
                 "protectedIndex.html",
-                singletonMap("profile", ctx.get(UserProfile.class))
+                Collections.singletonMap("profile", ctx.get(UserProfile.class))
             ))
         );
   }
 
-  private static Action<Chain> auth(String clientName, Authorizer... authorizers) {
+  private static <T extends org.pac4j.core.client.Client> Action<Chain> auth(Class<T> clientClass, Authorizer... authorizers) {
     return chain -> chain
-        .all(RatpackPac4j.requireAuth(clientName, authorizers))
+        .all(RatpackPac4j.requireAuth(clientClass, authorizers))
         .path("index.html", ctx ->
             ctx.render(template(
                 "protectedIndex.html",
-                singletonMap("profile", ctx.get(UserProfile.class))
+                Collections.singletonMap("profile", ctx.get(UserProfile.class))
             ))
         );
   }

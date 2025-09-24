@@ -46,7 +46,7 @@ public class RatpackTest {
             .params(m -> m.put("client_name", "FormClient"))
             .post("callback");
 
-        assertThat(response.getBody().getText(), containsString("attributes={username=foo}"));
+        assertThat(response.getBody().getText(), containsString("attributes: {username=foo}"));
         assertEquals(200, response.getStatusCode());
     }
 }
