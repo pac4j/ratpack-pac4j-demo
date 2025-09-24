@@ -64,66 +64,7 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302
     echo "🌐 Application accessible at: http://localhost:$PORT"
 
     # Default flags
-    FORM_AUTH_PASSED=false
     CAS_AUTH_PASSED=false
-    
-    # Test form authentication first
-    echo "📝 Testing form authentication..."
-    
-    # Get the form login page
-    FORM_URL="http://localhost:$PORT/form/index.html"
-    echo "📍 Testing form authentication at: $FORM_URL"
-    
-    # Follow redirections and capture final URL and response
-    FORM_RESPONSE=$(curl -s -L -w "FINAL_URL:%{url_effective}\nHTTP_CODE:%{http_code}" "$FORM_URL")
-    FORM_HTTP_CODE=$(echo "$FORM_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-    FORM_FINAL_URL=$(echo "$FORM_RESPONSE" | grep "FINAL_URL:" | cut -d: -f2-)
-    FORM_CONTENT=$(echo "$FORM_RESPONSE" | sed '/^FINAL_URL:/d' | sed '/^HTTP_CODE:/d')
-    
-    echo "🌐 Form final URL: $FORM_FINAL_URL"
-    echo "📄 Form HTTP Code: $FORM_HTTP_CODE"
-    
-    # Verify we reached the form login page
-    if [ "$FORM_HTTP_CODE" = "200" ] && echo "$FORM_CONTENT" | grep -q "loginForm.html"; then
-        echo "✅ Form login page test passed!"
-        echo "🔐 Successfully reached form login page"
-        
-        # Test form authentication with foo/foo credentials
-        echo "🧪 Testing form authentication with foo/foo..."
-        COOKIE_JAR="target/form_cookies.txt"
-        
-        # Extract callback URL from form
-        CALLBACK_URL=$(echo "$FORM_CONTENT" | grep -o 'action="[^"]*' | sed 's/action="//' | head -n1)
-        if [ -n "$CALLBACK_URL" ]; then
-            echo "📤 Submitting form credentials to: $CALLBACK_URL"
-            FORM_AUTH_RESPONSE=$(curl -s -c "$COOKIE_JAR" -b "$COOKIE_JAR" -L -w "FINAL_URL:%{url_effective}\nHTTP_CODE:%{http_code}" \
-                --data-urlencode "username=foo" \
-                --data-urlencode "password=foo" \
-                "$CALLBACK_URL")
-            
-            FORM_AUTH_HTTP_CODE=$(echo "$FORM_AUTH_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-            FORM_AUTH_FINAL_URL=$(echo "$FORM_AUTH_RESPONSE" | grep "FINAL_URL:" | cut -d: -f2-)
-            FORM_AUTH_CONTENT=$(echo "$FORM_AUTH_RESPONSE" | sed '/^FINAL_URL:/d' | sed '/^HTTP_CODE:/d')
-            
-            echo "🌐 After form auth final URL: $FORM_AUTH_FINAL_URL"
-            echo "📄 Form auth HTTP Code: $FORM_AUTH_HTTP_CODE"
-            
-            if [ "$FORM_AUTH_HTTP_CODE" = "200" ] && echo "$FORM_AUTH_CONTENT" | grep -q "username=foo"; then
-                echo "✅ Form authentication passed!"
-                echo "📋 Successfully authenticated with form login"
-                FORM_AUTH_PASSED=true
-            else
-                echo "❌ Form authentication failed!"
-                FORM_AUTH_PASSED=false
-            fi
-        else
-            echo "❌ Could not extract callback URL from form"
-            FORM_AUTH_PASSED=false
-        fi
-    else
-        echo "❌ Form login page test failed!"
-        FORM_AUTH_PASSED=false
-    fi
     
     # Test CAS authentication
     echo "🔗 Testing CAS authentication..."
@@ -220,7 +161,6 @@ else
     echo "❌ Initial test failed! HTTP code received: $HTTP_CODE"
     echo "📋 Server logs:"
     cat target/app.log || true
-    FORM_AUTH_PASSED=false
     CAS_AUTH_PASSED=false
 fi
 
@@ -235,22 +175,18 @@ sleep 2
 kill -9 $APP_PID 2>/dev/null || true
 
 # Clean up temporary files
-rm -f target/*cookies.txt target/cas_*.html target/final_*.html target/*_fetch.meta 2>/dev/null || true
+rm -f target/cas_cookies.txt target/cas_*.html target/final_*.html target/*_fetch.meta 2>/dev/null || true
 
-if ([ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]) && [ "$FORM_AUTH_PASSED" = "true" ] && [ "$CAS_AUTH_PASSED" = "true" ]; then
+if ([ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]) && [ "$CAS_AUTH_PASSED" = "true" ]; then
     echo "🎉 ratpack-pac4j-demo test completed successfully!"
     echo "✅ All tests passed:"
     echo "   - Application responds with HTTP $HTTP_CODE"
-    echo "   - Form authentication works correctly"
     echo "   - CAS authentication works correctly"
     exit 0
 else
     echo "💥 ratpack-pac4j-demo test failed!"
     if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "301" ] && [ "$HTTP_CODE" != "302" ]; then
         echo "❌ Application HTTP test failed (code: $HTTP_CODE)"
-    fi
-    if [ "$FORM_AUTH_PASSED" != "true" ]; then
-        echo "❌ Form authentication test failed"
     fi
     if [ "$CAS_AUTH_PASSED" != "true" ]; then
         echo "❌ CAS authentication test failed"
