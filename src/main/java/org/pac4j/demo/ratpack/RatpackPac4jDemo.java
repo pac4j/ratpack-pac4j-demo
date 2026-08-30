@@ -130,7 +130,7 @@ public class RatpackPac4jDemo {
               new SimpleTestUsernamePasswordAuthenticator());
 
           // CAS
-          final CasClient casClient = new CasClient(new CasConfiguration("https://casserverpac4j.herokuapp.com/login"));
+          final CasClient casClient = new CasClient(new CasConfiguration("https://www.casserverpac4j.dev/login"));
 
           // direct clients
           final SignatureConfiguration signatureConfiguration = new SecretSignatureConfiguration(JWT_SALT);
