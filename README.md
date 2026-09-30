@@ -2,6 +2,9 @@
   <img src="https://pac4j.github.io/pac4j/img/logo-ratpack.png" width="300" />
 </p>
 
+> This demo secures a Ratpack application with **[ratpack-pac4j](https://github.com/pac4j/ratpack-pac4j)**, the Ratpack implementation of **[pac4j](https://github.com/pac4j/pac4j)**, the security engine for Java.
+> If it is useful to you, please ⭐ **[star pac4j on GitHub](https://github.com/pac4j/pac4j)**: it helps other developers discover it!
+
 This `ratpack-pac4j-demo` project is a Ratpack web application to test the [ratpack-pac4j](https://github.com/ratpack/ratpack/tree/master/ratpack-pac4j) security module with various authentication mechanisms: Facebook, Twitter, form, basic auth, CAS, SAML, OpenID Connect, JWT...
 
 ## Start & test
